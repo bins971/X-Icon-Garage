@@ -6,13 +6,12 @@ RUN apt-get update && apt-get install -y openssl
 
 WORKDIR /app
 
-# Copy package files first for better caching
+# Copy package files first
 COPY package.json ./
 COPY frontend/package.json ./frontend/
 COPY backend/package.json ./backend/
 
-# Install dependencies
-RUN npm install
+# Install dependencies in subfolders
 RUN npm install --prefix frontend
 RUN npm install --prefix backend
 
@@ -34,18 +33,16 @@ WORKDIR /app
 # Install libatomic1 (required by Prisma)
 RUN apt-get update && apt-get install -y libatomic1 && rm -rf /var/lib/apt/lists/*
 
-# Copy package files and production node_modules from builder
-COPY --from=builder /app/package.json ./
-COPY --from=builder /app/node_modules ./node_modules
+# Copy backend (includes its node_modules from builder)
 COPY --from=builder /app/backend ./backend
 
-# Copy built frontend from builder
+# Copy built frontend
 COPY --from=builder /app/frontend/dist ./frontend/dist
 
 # Ensure we are in the backend for the start command
 WORKDIR /app/backend
 
-EXPOSE 5000
+EXPOSE 8080
 
 # Start command
 CMD ["node", "src/server.js"]
