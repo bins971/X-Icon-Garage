@@ -1,0 +1,12 @@
+{
+    "name": "carworkshop-root",
+    "version": "1.0.0",
+    "scripts": {
+        "dev:frontend": "npm run dev --prefix frontend",
+        "dev:backend": "npm run dev --prefix backend",
+        "dev": "npx concurrently \"npm run dev:frontend\" \"npm run dev:backend\"",
+        "install:all": "npm install --prefix frontend && npm install --prefix backend",
+        "build": "npm install --prefix frontend && npm run build --prefix frontend && npm install --prefix backend && npx --prefix backend prisma generate",
+        "start": "node backend/src/server.js"
+    }
+}

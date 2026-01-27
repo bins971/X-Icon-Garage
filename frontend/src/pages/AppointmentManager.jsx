@@ -1,0 +1,120 @@
+import React, { useState, useEffect } from 'react';
+import { Calendar, CheckCircle, XCircle, Clock, AlertCircle } from 'lucide-react';
+import { useNotification } from '../context/NotificationContext';
+import api from '../api/client';
+
+const AppointmentManager = () => {
+    const notify = useNotification();
+    const [appointments, setAppointments] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    const fetchAppointments = async () => {
+        try {
+            const res = await api.get('/bookings');
+            setAppointments(res.data);
+        } catch (error) {
+            console.error(error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => { fetchAppointments(); }, []);
+
+    const updateStatus = async (id, status) => {
+        try {
+            await api.patch(`/bookings/${id}`, { status });
+            notify.success(`Appointment marked as ${status.toLowerCase()}`);
+            fetchAppointments();
+        } catch (error) {
+            notify.error('Failed to update appointment status');
+        }
+    };
+
+    return (
+        <div className="space-y-6 animate-in fade-in duration-500">
+            <h1 className="text-3xl font-bold text-white">Appointment Requests</h1>
+
+            <div className="grid grid-cols-1 gap-4">
+                {appointments.map(appt => (
+                    <div key={appt.id} className="bg-slate-900 border border-slate-800 p-6 rounded-2xl flex justify-between items-start group hover:border-slate-700 transition-all">
+                        <div className="flex gap-4">
+                            <div className="p-3 bg-slate-800 rounded-xl h-fit text-blue-400">
+                                <Calendar size={24} />
+                            </div>
+                            <div>
+                                <h3 className="text-lg font-bold text-white mb-1">{appt.customerName}</h3>
+                                <p className="text-slate-400 text-sm flex items-center gap-2">
+                                    <Clock size={14} />
+                                    {new Date(appt.date).toLocaleString()}
+                                </p>
+                                <div className="mt-3 flex items-center gap-4 text-sm">
+                                    <span className="bg-slate-800 px-3 py-1 rounded-full text-slate-300 border border-slate-700">{appt.serviceType}</span>
+                                    <span className="text-slate-500">{appt.phone}</span>
+                                </div>
+                                {appt.notes && (
+                                    <p className="mt-3 text-sm text-slate-500 italic">"{appt.notes}"</p>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="flex flex-col items-end gap-3">
+                            <StatusBadge status={appt.status} />
+
+                            {appt.status === 'PENDING' && (
+                                <div className="flex gap-2 mt-2">
+                                    <button
+                                        onClick={() => updateStatus(appt.id, 'CONFIRMED')}
+                                        className="p-2 bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 rounded-lg transition-colors"
+                                        title="Confirm"
+                                    >
+                                        <CheckCircle size={20} />
+                                    </button>
+                                    <button
+                                        onClick={() => updateStatus(appt.id, 'CANCELLED')}
+                                        className="p-2 bg-red-500/10 text-red-500 hover:bg-red-500/20 rounded-lg transition-colors"
+                                        title="Cancel"
+                                    >
+                                        <XCircle size={20} />
+                                    </button>
+                                </div>
+                            )}
+
+                            {appt.status === 'CONFIRMED' && (
+                                <button
+                                    onClick={() => updateStatus(appt.id, 'COMPLETED')}
+                                    className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold rounded-xl transition-colors"
+                                >
+                                    Mark Completed
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                ))}
+
+                {appointments.length === 0 && !loading && (
+                    <div className="text-center py-12 text-slate-500 bg-slate-900/50 rounded-2xl border border-slate-800 border-dashed">
+                        No appointments found.
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+};
+
+const StatusBadge = ({ status }) => {
+    const styles = {
+        PENDING: 'bg-amber-500/10 text-amber-500 border-amber-500/20',
+        CONFIRMED: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20',
+        CANCELLED: 'bg-red-500/10 text-red-500 border-red-500/20',
+        COMPLETED: 'bg-blue-500/10 text-blue-500 border-blue-500/20'
+    };
+
+    return (
+        <span className={`px-3 py-1 rounded-full text-xs font-bold border ${styles[status] || styles.PENDING}`}>
+            {status}
+        </span>
+    );
+};
+
+export default AppointmentManager;

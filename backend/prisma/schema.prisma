@@ -1,0 +1,207 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id           String        @id @default(uuid())
+  username     String        @unique
+  password     String
+  name         String
+  role         Role          @default(ADVISOR)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  ActivityLogs ActivityLog[]
+  JobOrders    JobOrder[]    @relation("MechanicAssigned")
+}
+
+enum Role {
+  ADMIN
+  ADVISOR
+  MECHANIC
+  ACCOUNTANT
+}
+
+model Customer {
+  id        String    @id @default(uuid())
+  name      String
+  email     String?
+  phone     String
+  address   String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  vehicles  Vehicle[]
+  JobOrder  JobOrder[]
+}
+
+model Vehicle {
+  id           String     @id @default(uuid())
+  vin          String?    @unique
+  plateNumber  String     @unique
+  make         String
+  model        String
+  year         Int?
+  color        String?
+  customerId   String
+  customer     Customer   @relation(fields: [customerId], references: [id])
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  jobOrders    JobOrder[]
+}
+
+model Part {
+  id           String        @id @default(uuid())
+  partNumber   String        @unique
+  name         String
+  description  String?
+  supplier     String?
+  buyingPrice  Float
+  sellingPrice Float
+  quantity     Int           @default(0)
+  minThreshold Int           @default(5)
+  isPublic     Int           @default(1)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  JobOrderPart JobOrderPart[]
+}
+
+model JobOrder {
+  id              String         @id @default(uuid())
+  jobNumber       String         @unique // Auto-generated human-readable ID
+  customerId      String
+  customer        Customer       @relation(fields: [customerId], references: [id])
+  vehicleId       String
+  vehicle         Vehicle        @relation(fields: [vehicleId], references: [id])
+  mechanicId      String?
+  mechanic        User?          @relation("MechanicAssigned", fields: [mechanicId], references: [id])
+  complaint       String
+  inspectionNotes String?
+  estimatedCost   Float?
+  status          JobStatus      @default(RECEIVED)
+  priority        Priority       @default(NORMAL)
+  isArchived      Int            @default(0)
+  notes           String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  parts           JobOrderPart[]
+  Invoice         Invoice?
+  attachments     JobOrderAttachment[]
+}
+
+enum Priority {
+  NORMAL
+  URGENT
+}
+
+enum JobStatus {
+  RECEIVED
+  DIAGNOSING
+  IN_PROGRESS
+  WAITING_FOR_PARTS
+  COMPLETED
+  RELEASED
+}
+
+model JobOrderPart {
+  id         String   @id @default(uuid())
+  jobOrderId String
+  jobOrder   JobOrder @relation(fields: [jobOrderId], references: [id])
+  partId     String
+  part       Part     @relation(fields: [partId], references: [id])
+  quantity   Int
+  unitPrice  Float
+  createdAt  DateTime @default(now())
+}
+
+model Invoice {
+  id            String        @id @default(uuid())
+  invoiceNumber String        @unique
+  jobOrderId    String        @unique
+  jobOrder      JobOrder      @relation(fields: [jobOrderId], references: [id])
+  totalAmount   Float
+  discount      Float         @default(0)
+  tax           Float         @default(0)
+  subTotal      Float
+  status        PaymentStatus @default(UNPAID)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  payments      Payment[]
+}
+
+enum PaymentStatus {
+  UNPAID
+  PARTIAL
+  PAID
+}
+
+model Payment {
+  id            String   @id @default(uuid())
+  invoiceId     String
+  invoice       Invoice  @relation(fields: [invoiceId], references: [id])
+  amount        Float
+  paymentMethod String // Cash, GCash, Bank, etc.
+  createdAt     DateTime @default(now())
+}
+
+model ActivityLog {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  action    String
+  entity    String
+  entityId  String
+  details   String?
+  createdAt DateTime @default(now())
+}
+
+model JobOrderAttachment {
+  id         String   @id @default(uuid())
+  jobOrderId String
+  jobOrder   JobOrder @relation(fields: [jobOrderId], references: [id], onDelete: Cascade)
+  fileUrl    String
+  fileType   String?
+  uploadedAt DateTime @default(now())
+}
+
+model Appointment {
+  id          String            @id @default(uuid())
+  bookingRef  String?           @unique
+  customerName String
+  email       String?
+  phone       String
+  date        DateTime
+  serviceType String
+  status      AppointmentStatus @default(PENDING)
+  notes       String?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+}
+
+enum AppointmentStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+}
+
+model OnlineOrder {
+  id           String            @id @default(uuid())
+  customerName String
+  email        String
+  phone        String
+  items        String // JSON string of items
+  totalAmount  Float
+  status       OnlineOrderStatus @default(NEW)
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+}
+
+enum OnlineOrderStatus {
+  NEW
+  PROCESSED
+  COMPLETED
+  CANCELLED
+}
