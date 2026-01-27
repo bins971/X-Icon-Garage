@@ -11,8 +11,7 @@ COPY package.json ./
 COPY frontend/package.json ./frontend/
 COPY backend/package.json ./backend/
 
-# Install all dependencies
-ENV PRISMA_SKIP_POSTINSTALL_GENERATE=1
+# Install dependencies (only production for backend, all for frontend build)
 RUN npm install
 RUN npm install --prefix frontend
 
@@ -25,21 +24,24 @@ RUN npm run build --prefix frontend
 
 # Generate Prisma client
 WORKDIR /app/backend
-# Install devDeps for prisma.config.ts support
-RUN npm install
 RUN npx prisma generate --schema=prisma/schema.prisma
 
-# Final Stage
+# Final Stage (Production)
 FROM node:20-slim
 WORKDIR /app
 
 # Install libatomic1 (required by Prisma)
 RUN apt-get update && apt-get install -y libatomic1 && rm -rf /var/lib/apt/lists/*
 
-# Copy built app from builder
-COPY --from=builder /app /app
+# Copy package files and production node_modules from builder
+COPY --from=builder /app/package.json ./
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/backend ./backend
 
-# Ensure we are in the backend for the start command to find .env files
+# Copy built frontend from builder
+COPY --from=builder /app/frontend/dist ./frontend/dist
+
+# Ensure we are in the backend for the start command
 WORKDIR /app/backend
 
 EXPOSE 5000

@@ -3,7 +3,12 @@ dist
 frontend/dist
 backend/node_modules
 frontend/node_modules
+backend/logs
 .env
 .env.*
 .git
 .vscode
+.gemini
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
