@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Search, Mail, Phone, MapPin, Trash2, FileText, AlertCircle, X } from 'lucide-react';
+import { Plus, Search, Mail, Phone, MapPin, Trash2, FileText } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useNotification } from '../context/NotificationContext';
 import api from '../api/client';
@@ -14,26 +14,6 @@ const CustomerList = () => {
     };
 
     useEffect(() => { fetchCustomers(); }, []);
-
-    // Delete Modal State
-    const [deleteModal, setDeleteModal] = useState({ show: false, id: null, name: '' });
-
-    const promptDelete = (customer) => {
-        setDeleteModal({ show: true, id: customer.id, name: customer.name });
-    };
-
-    const confirmDelete = async () => {
-        try {
-            await api.delete(`/customers/${deleteModal.id}`);
-            fetchCustomers();
-            notify.success('Customer removed successfully');
-        } catch (error) {
-            console.error(error);
-            notify.error('Failed to delete customer');
-        } finally {
-            setDeleteModal({ show: false, id: null, name: '' });
-        }
-    };
 
     return (
         <div className="space-y-6 animate-in fade-in duration-500">
@@ -56,7 +36,9 @@ const CustomerList = () => {
                                 <Link to={`/dashboard/customers/${c.id}/history`} className="text-neutral-600 hover:text-amber-500 transition-colors" title="View Ledger & History">
                                     <FileText size={16} />
                                 </Link>
-                                <button onClick={() => promptDelete(c)} className="text-neutral-600 hover:text-red-500 transition-colors">
+                                <button onClick={() => {
+                                    // Logic to edit or delete could go here
+                                }} className="text-neutral-600 hover:text-red-500 transition-colors">
                                     <Trash2 size={16} />
                                 </button>
                             </div>
@@ -101,39 +83,6 @@ const CustomerList = () => {
 
             {showModal && (
                 <CustomerModal onClose={() => setShowModal(false)} onSuccess={() => { setShowModal(false); fetchCustomers(); }} />
-            )}
-
-            {/* Custom Delete Confirmation Modal */}
-            {deleteModal.show && (
-                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-[60] animate-in fade-in duration-200">
-                    <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 w-full max-w-sm shadow-2xl animate-in zoom-in-95 duration-200">
-                        <div className="flex flex-col items-center text-center">
-                            <div className="h-12 w-12 rounded-full bg-red-500/10 flex items-center justify-center mb-4 text-red-500">
-                                <AlertCircle size={24} />
-                            </div>
-                            <h3 className="text-lg font-bold text-white mb-2">Delete Customer?</h3>
-                            <p className="text-slate-400 text-sm mb-6">
-                                Are you sure you want to delete <span className="text-white font-semibold">{deleteModal.name}</span>?
-                                This action cannot be undone and will remove all associated vehicles and history.
-                            </p>
-
-                            <div className="flex gap-3 w-full">
-                                <button
-                                    onClick={() => setDeleteModal({ show: false, id: null, name: '' })}
-                                    className="flex-1 px-4 py-2.5 rounded-xl bg-slate-800 text-slate-300 font-medium hover:bg-slate-700 transition-colors"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    onClick={confirmDelete}
-                                    className="flex-1 px-4 py-2.5 rounded-xl bg-red-600 text-white font-bold hover:bg-red-500 transition-colors shadow-lg shadow-red-500/10"
-                                >
-                                    Delete
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
             )}
         </div>
     );

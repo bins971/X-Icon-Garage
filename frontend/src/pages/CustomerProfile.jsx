@@ -43,11 +43,6 @@ const CustomerProfile = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-
-        if (formData.phone.length !== 11 || !formData.phone.startsWith('09')) {
-            return notify.error('Phone number must be 11 digits and start with 09');
-        }
-
         setLoading(true);
         try {
             const data = new FormData();
@@ -144,13 +139,7 @@ const CustomerProfile = () => {
                                     className="w-full bg-neutral-950 border border-neutral-800 rounded-2xl p-4 pl-12 text-white font-bold focus:border-amber-500/50 outline-none transition-all"
                                     placeholder="09xx xxxx xxx"
                                     value={formData.phone}
-                                    onChange={e => {
-                                        const re = /^[0-9\b]+$/;
-                                        if (e.target.value === '' || re.test(e.target.value)) {
-                                            setFormData({ ...formData, phone: e.target.value })
-                                        }
-                                    }}
-                                    maxLength={11}
+                                    onChange={e => setFormData({ ...formData, phone: e.target.value })}
                                 />
                             </div>
                         </div>

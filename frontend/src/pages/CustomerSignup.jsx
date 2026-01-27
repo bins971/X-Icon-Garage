@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import api from '../api/client';
 import { useNotification } from '../context/NotificationContext';
-import { Wrench, Mail, Lock, ArrowRight, User, Shield, CheckCircle, Phone } from 'lucide-react';
+import { Wrench, Mail, Lock, ArrowRight, User, Shield, CheckCircle } from 'lucide-react';
 
 const CustomerSignup = () => {
     const notify = useNotification();
@@ -10,8 +10,7 @@ const CustomerSignup = () => {
         username: '',
         password: '',
         confirmPassword: '',
-        name: '',
-        phone: ''
+        name: ''
     });
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
@@ -25,25 +24,18 @@ const CustomerSignup = () => {
             return setError('Passwords do not match');
         }
 
-        if (formData.phone.length !== 11 || !formData.phone.startsWith('09')) {
-            return setError('Phone number must be 11 digits and start with 09');
-        }
-
         setLoading(true);
         try {
             const { data } = await api.post('/auth/register', {
                 username: formData.username,
                 password: formData.password,
-                name: formData.name,
-                phone: formData.phone,
-                email: formData.username.includes('@') ? formData.username : ''
+                name: formData.name
             });
             localStorage.setItem('token', data.token);
             notify.success('Access established! Welcome to the elite portal.');
             window.location.href = '/my-garage'; // Force reload to pick up new user
         } catch (err) {
-            console.error('Signup Error:', err);
-            const msg = err.response?.data?.message || err.response?.statusText || `Registration failed (${err.response?.status || 'Unknown'})`;
+            const msg = err.response?.data?.message || 'Registration failed. Try a different username.';
             setError(msg);
             notify.error(msg);
         } finally {
@@ -91,31 +83,6 @@ const CustomerSignup = () => {
                                 />
                             </div>
                         </div>
-
-                        <div className="space-y-2">
-                            <label className="text-xs font-black text-neutral-500 uppercase tracking-widest ml-1">Mobile Contact</label>
-                            <div className="relative">
-                                <span className="absolute left-5 top-1/2 -translate-y-1/2 text-neutral-600">
-                                    <Phone size={18} />
-                                </span>
-                                <input
-                                    type="tel"
-                                    required
-                                    className="w-full bg-neutral-950 border border-neutral-800 text-white px-14 py-4 rounded-2xl focus:outline-none focus:border-amber-500/50 transition-all font-bold text-sm placeholder:text-neutral-700"
-                                    placeholder="09xx xxxx xxx"
-                                    value={formData.phone}
-                                    maxLength={11}
-                                    onChange={(e) => {
-                                        const re = /^[0-9\b]+$/;
-                                        if (e.target.value === '' || re.test(e.target.value)) {
-                                            setFormData({ ...formData, phone: e.target.value })
-                                        }
-                                    }}
-                                />
-                            </div>
-                        </div>
-
-
 
                         <div className="space-y-2">
                             <label className="text-xs font-black text-neutral-500 uppercase tracking-widest ml-1">Username / Email</label>

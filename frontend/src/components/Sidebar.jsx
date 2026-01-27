@@ -22,7 +22,6 @@ const Sidebar = ({ isOpen, onClose }) => {
     const navigate = useNavigate();
     const location = useLocation();
     const [isCollapsed, setIsCollapsed] = useState(false);
-    const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
     const menuItems = [
         { name: 'DASHBOARD', icon: <LayoutDashboard size={18} />, path: '/dashboard', roles: ['ADMIN', 'ADVISOR', 'MECHANIC', 'ACCOUNTANT'] },
@@ -41,8 +40,7 @@ const Sidebar = ({ isOpen, onClose }) => {
 
     const handleLogout = () => {
         logout();
-        setShowLogoutConfirm(false);
-        navigate('/');
+        navigate('/login');
     };
 
     return (
@@ -105,7 +103,7 @@ const Sidebar = ({ isOpen, onClose }) => {
                         </div>
                     )}
                     <button
-                        onClick={() => setShowLogoutConfirm(true)}
+                        onClick={handleLogout}
                         className="w-full flex items-center gap-4 px-4 py-4 rounded-2xl text-xs font-black text-neutral-500 hover:text-red-500 hover:bg-red-500/10 transition-all duration-300 uppercase tracking-widest"
                     >
                         <LogOut size={18} />
@@ -121,33 +119,6 @@ const Sidebar = ({ isOpen, onClose }) => {
                     {isCollapsed ? <ChevronRight size={12} /> : <ChevronLeft size={12} />}
                 </button>
             </div>
-
-            {/* Logout Confirmation Modal */}
-            {showLogoutConfirm && (
-                <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 z-[100] animate-in fade-in duration-300">
-                    <div className="bg-neutral-900 border border-neutral-800 rounded-[2.5rem] p-10 w-full max-w-sm shadow-2xl animate-in zoom-in-95 duration-300">
-                        <div className="w-20 h-20 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-6 border border-red-500/20">
-                            <LogOut size={32} className="text-red-500" />
-                        </div>
-                        <h2 className="text-2xl font-black text-white text-center uppercase tracking-tighter italic mb-2">Wait! Signing Out?</h2>
-                        <p className="text-neutral-500 text-center text-xs font-bold uppercase tracking-widest mb-8 px-4">Are you sure you want to leave your session? You'll need to log back in to access your garage.</p>
-                        <div className="flex flex-col gap-3">
-                            <button
-                                onClick={handleLogout}
-                                className="w-full bg-red-500 hover:bg-red-400 text-black py-4 rounded-2xl font-black uppercase tracking-widest text-xs transition-all active:scale-95 shadow-xl shadow-red-500/10"
-                            >
-                                YES, SIGN ME OUT
-                            </button>
-                            <button
-                                onClick={() => setShowLogoutConfirm(false)}
-                                className="w-full bg-neutral-800 hover:bg-neutral-700 text-white py-4 rounded-2xl font-black uppercase tracking-widest text-xs transition-all"
-                            >
-                                NO, STAY LOGGED IN
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
         </aside>
     );
 };

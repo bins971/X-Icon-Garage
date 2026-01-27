@@ -68,25 +68,6 @@ router.post('/', protect, authorize('ADMIN', 'ADVISOR', 'ACCOUNTANT'), async (re
             [id, invoiceNumber, jobOrderId, totalAmount, discount || 0, tax || 0, subTotal, 'UNPAID']
         );
 
-        // Fetch customer and job details for notification
-        const details = await db.get(`
-            SELECT c.name as customerName, c.email, jo.jobnumber as "jobNumber"
-            FROM job_orders jo
-            JOIN customers c ON jo.customerid = c.id
-            WHERE jo.id = ?
-        `, [jobOrderId]);
-
-        if (details && details.email) {
-            const { logNotification } = require('../utils/notifier');
-            await logNotification('INVOICE_GENERATED', details.email, {
-                customerName: details.customerName,
-                invoiceNumber: invoiceNumber,
-                totalAmount: `₱${totalAmount.toLocaleString()}`,
-                jobNumber: details.jobNumber,
-                invoiceId: id
-            });
-        }
-
         await logActivity(req.user.id, 'GENERATE_INVOICE', 'INVOICE', id, `Generated invoice ${invoiceNumber}`);
 
         res.status(201).json({ id, invoiceNumber, totalAmount });
@@ -113,7 +94,6 @@ router.get('/', protect, async (req, res) => {
                 i.createdat as "createdAt", 
                 i.updatedat as "updatedAt",
                 jo.jobnumber as "jobNumber", 
-                c.id as "customerId",
                 c.name as "customerName", 
                 v.platenumber as "plateNumber"
             FROM invoices i
@@ -142,24 +122,7 @@ router.get('/:id', protect, async (req, res) => {
     const db = await getDb();
     try {
         const invoice = await db.get(`
-            SELECT 
-                i.id, 
-                i.invoicenumber as "invoiceNumber", 
-                i.totalamount as "totalAmount", 
-                i.subtotal as "subTotal", 
-                i.discount, 
-                i.tax, 
-                i.status, 
-                i.joborderid as "jobOrderId",
-                jo.jobnumber as "jobNumber", 
-                c.id as "customerId",
-                c.name as "customerName", 
-                c.email, 
-                c.phone, 
-                c.address, 
-                v.make, 
-                v.model, 
-                v.platenumber as "plateNumber"
+            SELECT i.*, jo.jobnumber as "jobNumber", c.name as "customerName", c.email, c.phone, c.address, v.make, v.model, v.platenumber as "plateNumber"
             FROM invoices i
             JOIN job_orders jo ON i.joborderid = jo.id
             JOIN customers c ON jo.customerid = c.id
@@ -169,13 +132,7 @@ router.get('/:id', protect, async (req, res) => {
 
         if (!invoice) return res.status(404).json({ message: 'Invoice not found' });
 
-        const parts = await db.all(`
-            SELECT jop.*, p.name as "partName", jop.unitprice as "unitPrice"
-            FROM job_order_parts jop
-            JOIN parts p ON jop.partid = p.id
-            WHERE jop.joborderid = ?
-        `, [invoice.jobOrderId]);
-
+        const parts = await db.all('SELECT * FROM job_order_parts WHERE joborderid = ?', [invoice.joborderid]);
         const payments = await db.all('SELECT * FROM payments WHERE invoiceid = ?', [req.params.id]);
 
         res.json({ ...invoice, parts, payments });

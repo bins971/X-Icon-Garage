@@ -8,15 +8,13 @@ const crypto = require('crypto');
 
 // @route   POST /api/auth/register
 router.post('/register', async (req, res) => {
-    console.log('[Register] Request body:', req.body);
-    const { username, password, name, phone, email } = req.body;
+    const { username, password, name } = req.body;
     const db = await getDb();
     let userId = null;
 
     try {
         const existing = await db.get('SELECT * FROM users WHERE username = ?', [username]);
         if (existing) {
-            console.log('[Register] Username exists:', username);
             return res.status(400).json({ message: 'Username already exists' });
         }
 
@@ -29,20 +27,14 @@ router.post('/register', async (req, res) => {
             'INSERT INTO users (id, username, password, name, role) VALUES (?, ?, ?, ?, ?)',
             [userId, username, hashedPassword, name, 'CUSTOMER']
         );
-        console.log('[Register] User created:', userId);
 
-        // Robustly create customer profile
         try {
-            console.log('[Register] Creating customer profile...');
             await db.run(
-                'INSERT INTO customers (id, name, phone, email, userId) VALUES (?, ?, ?, ?, ?)',
-                [customerIdForNewUser, name, phone || '', email || (username.includes('@') ? username : ''), userId]
+                'INSERT INTO customers (id, name, phone, userId) VALUES (?, ?, ?, ?)',
+                [customerIdForNewUser, name, '', userId]
             );
-            console.log('[Register] Customer profile created');
         } catch (customerError) {
-            console.error('Customer profile creation failed:', customerError.message);
-            // If it fails, we might want to fail the whole request or handle it gracefully
-            // For now, logging it, but the vehicles endpoint will try to fix it later if missing
+            console.error('Customer profile creation failed (will be auto-repaired on first vehicle registration):', customerError.message);
         }
 
         const token = jwt.sign(
@@ -59,7 +51,6 @@ router.post('/register', async (req, res) => {
             token
         });
     } catch (error) {
-        console.error('[Register] Error:', error);
         if (userId) {
             try {
                 await db.run('DELETE FROM users WHERE id = ?', [userId]);

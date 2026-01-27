@@ -2,39 +2,18 @@ import React, { useState, useEffect } from 'react';
 import {
     Plus, Search, Filter, Calendar, User,
     MoreVertical, FileText, Image as ImageIcon,
-    Trash2, AlertCircle, Archive, Upload, X, ExternalLink, File, ChevronDown,
-    CreditCard, Wallet, ShoppingBag
+    Trash2, AlertCircle, Archive, Upload
 } from 'lucide-react';
 import { useNotification } from '../context/NotificationContext';
-import { useAuth } from '../context/AuthContext';
 import api from '../api/client';
 
 const JobOrderList = () => {
     const notify = useNotification();
-    const { user } = useAuth();
     const [jobs, setJobs] = useState([]);
-    const [searchTerm, setSearchTerm] = useState('');
     const [filters, setFilters] = useState({ status: '', priority: '', isArchived: false });
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [selectedJob, setSelectedJob] = useState(null);
     const [loading, setLoading] = useState(true);
-
-    // Attachments Modal State
-    const [showAttachmentsModal, setShowAttachmentsModal] = useState(false);
-    const [selectedJobForAttachments, setSelectedJobForAttachments] = useState(null);
-    const [attachments, setAttachments] = useState([]);
-    const [uploading, setUploading] = useState(false);
-    const [statusUpdating, setStatusUpdating] = useState(null);
-
-    // Billing Modal State
-    const [showBillingModal, setShowBillingModal] = useState(false);
-    const [selectedJobForBilling, setSelectedJobForBilling] = useState(null);
-    const [billingParts, setBillingParts] = useState([]);
-    const [inventoryParts, setInventoryParts] = useState([]);
-    const [discount, setDiscount] = useState(0);
-    const [tax, setTax] = useState(0);
-    const [billingLoading, setBillingLoading] = useState(false);
-    const [partSearch, setPartSearch] = useState('');
 
     // Fetch Jobs
     const fetchJobs = async () => {
@@ -54,11 +33,7 @@ const JobOrderList = () => {
         }
     };
 
-    useEffect(() => {
-        fetchJobs();
-        const interval = setInterval(fetchJobs, 10000); // Refresh every 10 seconds
-        return () => clearInterval(interval);
-    }, [filters]);
+    useEffect(() => { fetchJobs(); }, [filters]);
 
     // Handlers
     const handleArchive = async (id) => {
@@ -72,117 +47,22 @@ const JobOrderList = () => {
         }
     };
 
-    const handleOpenBilling = async (job) => {
-        setSelectedJobForBilling(job);
-        setShowBillingModal(true);
-        setBillingLoading(true);
-        try {
-            const [partsRes, inventoryRes] = await Promise.all([
-                api.get(`/job-orders/${job.id}/parts`),
-                api.get('/parts')
-            ]);
-            setBillingParts(partsRes.data);
-            setInventoryParts(inventoryRes.data);
-            setDiscount(0);
-            setTax(0);
-        } catch (error) {
-            notify.error('Failed to load billing data');
-        } finally {
-            setBillingLoading(false);
-        }
-    };
-
-    const handleAddPartToJob = async (partId) => {
-        try {
-            await api.post(`/invoices/${selectedJobForBilling.id}/parts`, { partId, quantity: 1 });
-            notify.success('Part added to job');
-            // Refresh parts
-            const res = await api.get(`/job-orders/${selectedJobForBilling.id}/parts`);
-            setBillingParts(res.data);
-        } catch (error) {
-            notify.error(error.response?.data?.message || 'Failed to add part');
-        }
-    };
-
-    const handleCreateInvoice = async () => {
-        try {
-            await api.post('/invoices', {
-                jobOrderId: selectedJobForBilling.id,
-                discount,
-                tax
-            });
-            notify.success('Invoice generated successfully');
-            setShowBillingModal(false);
-            fetchJobs();
-        } catch (error) {
-            notify.error('Failed to generate invoice');
-        }
-    };
-
-    const calculateSubtotal = () => {
-        const base = parseFloat(selectedJobForBilling?.estimatedCost) || 0;
-        const partsTotal = billingParts.reduce((sum, p) => sum + (p.unitprice * p.quantity), 0);
-        return base + partsTotal;
-    };
-
-    const handleStatusUpdate = async (jobId, newStatus) => {
-        setStatusUpdating(jobId);
-        try {
-            await api.patch(`/job-orders/${jobId}/status`, { status: newStatus });
-            notify.success('Status updated successfully');
-            fetchJobs();
-        } catch (error) {
-            notify.error('Failed to update status');
-        } finally {
-            setStatusUpdating(null);
-        }
-    };
-
-    const handleViewAttachments = async (job) => {
-        setSelectedJobForAttachments(job);
-        setShowAttachmentsModal(true);
-        fetchAttachments(job.id);
-    };
-
-    const fetchAttachments = async (jobId) => {
-        try {
-            const res = await api.get(`/upload/${jobId}`);
-            setAttachments(res.data);
-        } catch (error) {
-            console.error(error);
-        }
-    };
-
-    const handleFileUpload = async (e) => {
+    const handleFileUpload = async (e, jobOrderId) => {
         const file = e.target.files[0];
         if (!file) return;
 
-        setUploading(true);
         const formData = new FormData();
         formData.append('file', file);
 
         try {
-            await api.post(`/upload/${selectedJobForAttachments.id}`, formData, {
+            await api.post(`/upload/${jobOrderId}`, formData, {
                 headers: { 'Content-Type': 'multipart/form-data' }
             });
             notify.success('File uploaded successfully');
-            fetchAttachments(selectedJobForAttachments.id);
         } catch (error) {
             notify.error('Upload failed');
-        } finally {
-            setUploading(false);
         }
     };
-
-    // Filtering Logic
-    const filteredJobs = jobs.filter(job => {
-        const search = searchTerm.toLowerCase();
-        return (
-            job.jobNumber?.toLowerCase().includes(search) ||
-            job.customerName?.toLowerCase().includes(search) ||
-            job.plateNumber?.toLowerCase().includes(search)
-        );
-    });
 
     return (
         <div className="space-y-6 animate-in fade-in duration-500">
@@ -192,14 +72,12 @@ const JobOrderList = () => {
                     <h1 className="text-3xl font-bold text-white">Job Orders</h1>
                     <p className="text-slate-400 mt-1">Manage workshop jobs, priorities, and assignments.</p>
                 </div>
-                {user?.role !== 'CUSTOMER' && (
-                    <button
-                        onClick={() => setShowCreateModal(true)}
-                        className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-3 rounded-xl flex items-center gap-2 transition-all active:scale-95 font-black text-xs uppercase tracking-widest shadow-xl shadow-blue-500/10"
-                    >
-                        <Plus size={20} /> New Job Order
-                    </button>
-                )}
+                <button
+                    onClick={() => setShowCreateModal(true)}
+                    className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-3 rounded-xl flex items-center gap-2 transition-all active:scale-95 font-black text-xs uppercase tracking-widest shadow-xl shadow-blue-500/10"
+                >
+                    <Plus size={20} /> New Job Order
+                </button>
             </div>
 
             {/* Filters */}
@@ -207,17 +85,6 @@ const JobOrderList = () => {
                 <div className="flex items-center gap-2 text-slate-400">
                     <Filter size={18} />
                     <span className="text-sm font-medium">Filters:</span>
-                </div>
-
-                <div className="relative">
-                    <Search className="absolute left-3 top-2 text-slate-500" size={16} />
-                    <input
-                        type="text"
-                        placeholder="Search Job # or Client..."
-                        className="bg-slate-950 border border-slate-700 text-slate-300 rounded-lg pl-9 pr-3 py-1.5 focus:outline-none focus:border-blue-500 text-sm"
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                    />
                 </div>
 
                 <select
@@ -252,7 +119,7 @@ const JobOrderList = () => {
 
             {/* Job Board */}
             <div className="grid grid-cols-1 gap-4">
-                {filteredJobs.map(job => (
+                {jobs.map(job => (
                     <div key={job.id} className="bg-slate-900 border border-slate-800 p-6 rounded-2xl hover:border-slate-700 transition-all group relative">
                         <div className="flex justify-between items-start">
                             <div className="flex gap-4">
@@ -285,62 +152,19 @@ const JobOrderList = () => {
                             </div>
 
                             <div className="flex items-center gap-3">
+                                <span className={`px-3 py-1 rounded-full text-xs font-medium border ${job.status === 'COMPLETED' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' :
+                                    job.status === 'RECEIVED' ? 'bg-blue-500/10 text-blue-500 border-blue-500/20' :
+                                        'bg-amber-500/10 text-amber-500 border-amber-500/20'
+                                    }`}>
+                                    {job.status}
+                                </span>
+
                                 <div className="relative">
-                                    {user?.role !== 'CUSTOMER' ? (
-                                        <div className={`flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium border cursor-pointer hover:opacity-80 transition-opacity ${job.status === 'COMPLETED' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' :
-                                            job.status === 'RECEIVED' ? 'bg-blue-500/10 text-blue-500 border-blue-500/20' :
-                                                'bg-amber-500/10 text-amber-500 border-amber-500/20'
-                                            }`}>
-                                            <select
-                                                className="bg-transparent outline-none appearance-none cursor-pointer"
-                                                value={job.status}
-                                                onChange={(e) => handleStatusUpdate(job.id, e.target.value)}
-                                                disabled={statusUpdating === job.id}
-                                            >
-                                                <option value="RECEIVED" className="bg-slate-900 text-blue-500">RECEIVED</option>
-                                                <option value="DIAGNOSING" className="bg-slate-900 text-amber-500">DIAGNOSING</option>
-                                                <option value="IN_PROGRESS" className="bg-slate-900 text-amber-500">IN PROGRESS</option>
-                                                <option value="WAITING_FOR_PARTS" className="bg-slate-900 text-amber-500">WAITING PARTS</option>
-                                                <option value="COMPLETED" className="bg-slate-900 text-emerald-500">COMPLETED</option>
-                                                <option value="RELEASED" className="bg-slate-900 text-emerald-500">RELEASED</option>
-                                            </select>
-                                            <ChevronDown size={12} />
-                                        </div>
-                                    ) : (
-                                        <span className={`px-3 py-1 rounded-full text-xs font-medium border ${job.status === 'COMPLETED' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' :
-                                            job.status === 'RECEIVED' ? 'bg-blue-500/10 text-blue-500 border-blue-500/20' :
-                                                'bg-amber-500/10 text-amber-500 border-amber-500/20'
-                                            }`}>
-                                            {job.status}
-                                        </span>
-                                    )}
+                                    <label className="p-2 hover:bg-slate-800 rounded-lg cursor-pointer text-slate-400 hover:text-white transition-colors" title="Upload Attachment">
+                                        <input type="file" className="hidden" onChange={(e) => handleFileUpload(e, job.id)} />
+                                        <Upload size={18} />
+                                    </label>
                                 </div>
-
-                                <button
-                                    onClick={() => handleViewAttachments(job)}
-                                    className="p-2 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white transition-colors relative group/btn"
-                                    title="View/Upload Attachments"
-                                >
-                                    <Upload size={18} />
-                                </button>
-
-                                {job.invoiceId ? (
-                                    <button
-                                        onClick={() => window.location.href = `/receipt/${job.invoiceId}`}
-                                        className="p-2 hover:bg-amber-500/10 hover:text-amber-500 rounded-lg text-amber-500 transition-colors"
-                                        title="View Invoice"
-                                    >
-                                        <FileText size={18} />
-                                    </button>
-                                ) : (
-                                    <button
-                                        onClick={() => handleOpenBilling(job)}
-                                        className="p-2 hover:bg-emerald-500/10 hover:text-emerald-500 rounded-lg text-slate-400 transition-colors"
-                                        title="Finalize Billing"
-                                    >
-                                        <Wallet size={18} />
-                                    </button>
-                                )}
 
                                 <button
                                     onClick={() => handleArchive(job.id)}
@@ -354,122 +178,6 @@ const JobOrderList = () => {
                     </div>
                 ))}
 
-                {/* Billing Modal */}
-                {showBillingModal && selectedJobForBilling && (
-                    <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 z-50">
-                        <div className="bg-neutral-900 border border-neutral-800 rounded-[2.5rem] p-10 w-full max-w-4xl shadow-2xl animate-in zoom-in-95 duration-300 max-h-[90vh] overflow-y-auto">
-                            <div className="flex justify-between items-start mb-8">
-                                <div>
-                                    <h2 className="text-3xl font-black text-white italic uppercase tracking-tighter">FINALIZE BILLING</h2>
-                                    <p className="text-neutral-500 font-bold uppercase tracking-widest text-[10px] mt-1">{selectedJobForBilling.jobNumber} • {selectedJobForBilling.customerName}</p>
-                                </div>
-                                <button onClick={() => setShowBillingModal(false)} className="text-neutral-500 hover:text-white transition-colors">
-                                    <X size={32} />
-                                </button>
-                            </div>
-
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-                                {/* Left: Part Selection & Summary */}
-                                <div className="space-y-8">
-                                    <div>
-                                        <label className="text-xs font-black text-neutral-500 uppercase tracking-widest block mb-4">Add Parts from Inventory</label>
-                                        <div className="relative mb-4">
-                                            <Search className="absolute left-4 top-4 text-neutral-600" size={18} />
-                                            <input
-                                                type="text"
-                                                placeholder="Search parts by name or number..."
-                                                className="w-full bg-neutral-950 border border-neutral-800 rounded-2xl py-4 pl-12 pr-4 text-white font-bold outline-none focus:border-emerald-500 transition-all"
-                                                value={partSearch}
-                                                onChange={(e) => setPartSearch(e.target.value)}
-                                            />
-                                        </div>
-                                        <div className="space-y-2 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
-                                            {inventoryParts
-                                                .filter(p => p.name.toLowerCase().includes(partSearch.toLowerCase()) || p.partNumber.toLowerCase().includes(partSearch.toLowerCase()))
-                                                .slice(0, 5)
-                                                .map(part => (
-                                                    <div key={part.id} className="flex items-center justify-between p-4 bg-neutral-950 rounded-2xl border border-neutral-800 hover:border-neutral-600 transition-all group">
-                                                        <div>
-                                                            <p className="text-white font-black text-xs uppercase">{part.name}</p>
-                                                            <p className="text-[10px] text-neutral-600 font-bold uppercase tracking-widest">{part.partNumber} • Stock: {part.quantity}</p>
-                                                        </div>
-                                                        <button
-                                                            onClick={() => handleAddPartToJob(part.id)}
-                                                            className="bg-emerald-500 hover:bg-emerald-400 text-black p-2 rounded-xl transition-all active:scale-90"
-                                                        >
-                                                            <Plus size={16} />
-                                                        </button>
-                                                    </div>
-                                                ))}
-                                        </div>
-                                    </div>
-
-                                    <div className="bg-neutral-950 rounded-3xl p-6 border border-neutral-800">
-                                        <h3 className="text-xs font-black text-neutral-500 uppercase tracking-widest mb-4">Billing Summary</h3>
-                                        <div className="space-y-3">
-                                            <div className="flex justify-between text-sm">
-                                                <span className="text-neutral-400 font-bold uppercase tracking-widest text-[10px]">Base Service Cost</span>
-                                                <span className="text-white font-black">₱{Number(selectedJobForBilling.estimatedCost || 0).toLocaleString()}</span>
-                                            </div>
-                                            {billingParts.map((p, i) => (
-                                                <div key={i} className="flex justify-between text-sm">
-                                                    <span className="text-neutral-400 font-bold uppercase tracking-widest text-[10px]">{p.quantity}x {p.name}</span>
-                                                    <span className="text-white font-black">₱{(p.unitprice * p.quantity).toLocaleString()}</span>
-                                                </div>
-                                            ))}
-                                            <div className="pt-4 mt-4 border-t border-neutral-800 flex justify-between items-center text-lg">
-                                                <span className="text-white font-black italic uppercase tracking-tighter">Subtotal</span>
-                                                <span className="text-emerald-500 font-black tracking-tighter">₱{calculateSubtotal().toLocaleString()}</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Right: Final Adjustments */}
-                                <div className="space-y-8">
-                                    <div className="grid grid-cols-2 gap-6">
-                                        <div className="space-y-2">
-                                            <label className="text-xs font-black text-neutral-500 uppercase tracking-widest ml-1">Discount (₱)</label>
-                                            <input
-                                                type="number"
-                                                className="w-full bg-neutral-950 border border-neutral-800 rounded-2xl p-4 text-white font-black"
-                                                value={discount}
-                                                onChange={(e) => setDiscount(e.target.value)}
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <label className="text-xs font-black text-neutral-500 uppercase tracking-widest ml-1">Tax / Fees (₱)</label>
-                                            <input
-                                                type="number"
-                                                className="w-full bg-neutral-950 border border-neutral-800 rounded-2xl p-4 text-white font-black"
-                                                value={tax}
-                                                onChange={(e) => setTax(e.target.value)}
-                                            />
-                                        </div>
-                                    </div>
-
-                                    <div className="bg-emerald-500 p-8 rounded-[2.5rem] shadow-2xl shadow-emerald-500/20">
-                                        <p className="text-black font-black uppercase tracking-widest text-xs mb-1">Final Payment Due</p>
-                                        <h2 className="text-5xl font-black text-black tracking-tighter italic">
-                                            ₱{(calculateSubtotal() - (parseFloat(discount) || 0) + (parseFloat(tax) || 0)).toLocaleString()}
-                                        </h2>
-                                        <div className="mt-8 pt-8 border-t border-black/10 flex flex-col gap-4">
-                                            <button
-                                                onClick={handleCreateInvoice}
-                                                className="w-full bg-black text-white py-5 rounded-2xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-3 hover:scale-105 active:scale-95 transition-all shadow-xl"
-                                            >
-                                                <CreditCard size={18} className="text-emerald-500" />
-                                                GENERATE OFFICIAL INVOICE
-                                            </button>
-                                            <p className="text-black/60 font-bold uppercase tracking-widest text-[8px] text-center">This will lock the billing and notify the client</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
                 {jobs.length === 0 && !loading && (
                     <div className="text-center py-12 text-slate-500 bg-slate-900/50 rounded-2xl border border-slate-800 border-dashed">
                         <p>No job orders found matching your filters.</p>
@@ -478,82 +186,24 @@ const JobOrderList = () => {
             </div>
 
             {/* Create Job Modal */}
-            {/* Attachments Modal */}
-            {showAttachmentsModal && selectedJobForAttachments && (
+            {showCreateModal && (
                 <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-                    <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 w-full max-w-md shadow-xl animate-in zoom-in-95 duration-200">
+                    <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 w-full max-w-2xl shadow-xl animate-in zoom-in-95 duration-200">
                         <div className="flex justify-between items-center mb-6">
-                            <div>
-                                <h2 className="text-xl font-bold text-white">Attachments</h2>
-                                <p className="text-slate-400 text-xs mt-1">{selectedJobForAttachments.jobNumber}</p>
-                            </div>
-                            <button onClick={() => setShowAttachmentsModal(false)} className="text-slate-400 hover:text-white">
-                                <X size={24} />
+                            <h2 className="text-xl font-bold text-white">Create New Job Order</h2>
+                            <button onClick={() => setShowCreateModal(false)} className="text-slate-400 hover:text-white">
+                                <Trash2 className="rotate-45" size={24} />
                             </button>
                         </div>
 
-                        {/* File List */}
-                        <div className="space-y-3 mb-6 max-h-60 overflow-y-auto pr-2">
-                            {attachments.length > 0 ? attachments.map((file) => (
-                                <div key={file.id} className="flex items-center gap-3 p-3 bg-slate-950 rounded-xl border border-slate-800 group">
-                                    <div className="p-2 bg-slate-900 rounded-lg">
-                                        {file.fileType?.includes('image') ? <ImageIcon size={16} className="text-blue-500" /> : <File size={16} className="text-slate-500" />}
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <p className="text-sm font-medium text-slate-300 truncate">{file.fileUrl.split('/').pop()}</p>
-                                        <p className="text-[10px] text-slate-500">{new Date(file.uploadedAt).toLocaleString()}</p>
-                                    </div>
-                                    <a
-                                        href={`http://localhost:5000${file.fileUrl}`}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="p-2 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white transition-colors"
-                                    >
-                                        <ExternalLink size={16} />
-                                    </a>
-                                </div>
-                            )) : (
-                                <div className="text-center py-8 text-slate-500 text-sm bg-slate-950/50 rounded-xl border border-slate-800 border-dashed">
-                                    No attachments yet.
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Upload Area */}
-                        <div className="relative">
-                            <label className={`block w-full border-2 border-dashed border-slate-700 hover:border-blue-500 rounded-xl p-8 text-center cursor-pointer transition-colors bg-slate-950/30 ${uploading ? 'opacity-50 pointer-events-none' : ''}`}>
-                                <input type="file" className="hidden" onChange={handleFileUpload} disabled={uploading} />
-                                <div className="bg-blue-500/10 text-blue-500 p-3 rounded-full w-fit mx-auto mb-3">
-                                    <Upload size={24} />
-                                </div>
-                                <p className="text-sm font-medium text-slate-300">{uploading ? 'Uploading...' : 'Click to Upload File'}</p>
-                                <p className="text-xs text-slate-500 mt-1">Images, PDF, Docs</p>
-                            </label>
-                        </div>
+                        <CreateJobForm onSuccess={() => {
+                            setShowCreateModal(false);
+                            fetchJobs();
+                        }} />
                     </div>
                 </div>
             )}
-
-            {
-                showCreateModal && (
-                    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-                        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 w-full max-w-2xl shadow-xl animate-in zoom-in-95 duration-200">
-                            <div className="flex justify-between items-center mb-6">
-                                <h2 className="text-xl font-bold text-white">Create New Job Order</h2>
-                                <button onClick={() => setShowCreateModal(false)} className="text-slate-400 hover:text-white">
-                                    <Trash2 className="rotate-45" size={24} />
-                                </button>
-                            </div>
-
-                            <CreateJobForm onSuccess={() => {
-                                setShowCreateModal(false);
-                                fetchJobs();
-                            }} />
-                        </div>
-                    </div>
-                )
-            }
-        </div >
+        </div>
     );
 };
 
@@ -590,9 +240,7 @@ const CreateJobForm = ({ onSuccess }) => {
             notify.success('Job Order Created!');
             onSuccess();
         } catch (error) {
-            console.error(error);
-            const msg = error.response?.data?.message || 'Error creating job';
-            notify.error(msg);
+            notify.error('Error creating job');
         }
     };
 

@@ -156,7 +156,7 @@ const TrackJob = () => {
                                 </div>
                                 <div className="flex flex-col">
                                     <span className="text-neutral-500 text-xs">Last Update</span>
-                                    <span className="text-white font-medium">{result.lastUpdated ? new Date(result.lastUpdated).toLocaleDateString() : 'Pending Updates'}</span>
+                                    <span className="text-white font-medium">{new Date(result.lastUpdated).toLocaleDateString()}</span>
                                 </div>
                             </div>
                         </div>

@@ -168,12 +168,6 @@ const Dashboard = () => {
                     <div className="h-[300px] w-full">
                         <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={data.revenueChart}>
-                                <defs>
-                                    <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="0%" stopColor="#f59e0b" stopOpacity={0.4} />
-                                        <stop offset="100%" stopColor="#f59e0b" stopOpacity={0.05} />
-                                    </linearGradient>
-                                </defs>
                                 <CartesianGrid strokeDasharray="3 3" stroke="#262626" vertical={false} />
                                 <XAxis dataKey="month" stroke="#737373" fontSize={10} tick={{ fontWeight: 'black' }} tickLine={false} axisLine={false} />
                                 <YAxis stroke="#737373" fontSize={10} tick={{ fontWeight: 'black' }} tickLine={false} axisLine={false} />
@@ -181,7 +175,7 @@ const Dashboard = () => {
                                     cursor={{ fill: 'rgba(245, 158, 11, 0.05)' }}
                                     contentStyle={{ backgroundColor: '#0a0a0a', borderColor: '#262626', borderRadius: '16px', color: '#f5f5f5', fontSize: '12px', fontWeight: '900' }}
                                 />
-                                <Bar dataKey="revenue" fill="url(#revenueGradient)" stroke="#f59e0b" strokeWidth={2} radius={[8, 8, 0, 0]} />
+                                <Bar dataKey="revenue" fill="#f59e0b" radius={[8, 8, 0, 0]} />
                             </BarChart>
                         </ResponsiveContainer>
                     </div>
@@ -190,86 +184,38 @@ const Dashboard = () => {
                 {/* Job Status Distribution */}
                 <div className="bg-neutral-900/40 backdrop-blur-xl border border-neutral-800 p-8 rounded-[2.5rem] shadow-2xl">
                     <h3 className="text-sm font-black text-white mb-8 uppercase tracking-[0.2em]">Job Status Distribution</h3>
-                    <div className="flex flex-col md:flex-row items-center justify-between gap-8 h-[300px]">
-                        <div className="relative w-full md:w-1/2 h-full flex items-center justify-center">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <PieChart>
-                                    <Pie
-                                        data={data.jobStatus}
-                                        cx="50%"
-                                        cy="50%"
-                                        innerRadius={75}
-                                        outerRadius={105}
-                                        paddingAngle={8}
-                                        dataKey="count"
-                                        stroke="none"
-                                        animationBegin={0}
-                                        animationDuration={1500}
-                                    >
-                                        {data.jobStatus.map((entry, index) => (
-                                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                        ))}
-                                    </Pie>
-                                    <Tooltip
-                                        contentStyle={{ backgroundColor: '#0a0a0a', borderColor: '#262626', borderRadius: '16px', color: '#f5f5f5', fontSize: '12px', fontWeight: '900', textTransform: 'uppercase' }}
-                                        itemStyle={{ color: '#f59e0b' }}
-                                    />
-                                </PieChart>
-                            </ResponsiveContainer>
-                            {/* Central Stats */}
-                            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none">
-                                <p className="text-4xl font-black text-white italic leading-none">{data.jobStatus.reduce((acc, curr) => acc + Number(curr.count), 0)}</p>
-                                <p className="text-[10px] font-black text-neutral-500 uppercase tracking-widest mt-1">Total Jobs</p>
-                            </div>
-                        </div>
-                        <div className="w-full md:w-1/2 space-y-3">
+                    <div className="h-[300px] w-full flex items-center justify-center">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                                <Pie
+                                    data={data.jobStatus}
+                                    cx="50%"
+                                    cy="50%"
+                                    innerRadius={70}
+                                    outerRadius={100}
+                                    paddingAngle={8}
+                                    dataKey="count"
+                                >
+                                    {data.jobStatus.map((entry, index) => (
+                                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                    ))}
+                                </Pie>
+                                <Tooltip
+                                    contentStyle={{ backgroundColor: '#0a0a0a', borderColor: '#262626', borderRadius: '16px', color: '#f5f5f5', fontSize: '12px', fontWeight: '900' }}
+                                />
+                            </PieChart>
+                        </ResponsiveContainer>
+                        <div className="space-y-3 ml-8">
                             {data.jobStatus.map((entry, index) => (
-                                <div key={index} className="flex items-center justify-between p-3 rounded-2xl bg-neutral-950 border border-neutral-800/50 group hover:border-neutral-700 transition-all">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-3 h-3 rounded-full shadow-[0_0_10px_rgba(0,0,0,0.5)]" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
-                                        <span className="text-[10px] font-black text-neutral-400 uppercase tracking-widest">{entry.status}</span>
-                                    </div>
-                                    <span className="text-sm font-black text-white italic">{entry.count}</span>
+                                <div key={index} className="flex items-center gap-3">
+                                    <div className="w-3 h-3 rounded-full shadow-lg" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
+                                    <span className="text-xs font-black text-neutral-400 uppercase tracking-widest">{entry.status} ({entry.count})</span>
                                 </div>
                             ))}
                         </div>
                     </div>
                 </div>
             </div>
-
-            {/* Top Mechanics Performance */}
-            {data.mechanicStats && data.mechanicStats.length > 0 && (
-                <div className="bg-neutral-900/40 backdrop-blur-xl border border-neutral-800 p-8 rounded-[2.5rem] shadow-2xl">
-                    <div className="flex justify-between items-center mb-10">
-                        <div>
-                            <h3 className="text-sm font-black text-white uppercase tracking-[0.2em]">Efficiency Leaderboard</h3>
-                            <p className="text-[10px] text-neutral-500 font-bold uppercase tracking-widest mt-1">Current Month Status</p>
-                        </div>
-                        <div className="bg-amber-500/10 text-amber-500 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border border-amber-500/20">
-                            Performance Tracking
-                        </div>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                        {data.mechanicStats.map((mech, idx) => (
-                            <div key={idx} className="bg-neutral-950 p-6 rounded-[2rem] border border-neutral-800 flex items-center justify-between group hover:border-amber-500/30 transition-all shadow-xl">
-                                <div className="flex items-center gap-4">
-                                    <div className="w-14 h-14 rounded-2xl bg-neutral-900 border border-neutral-800 flex items-center justify-center text-amber-500 font-black text-xl shadow-inner group-hover:scale-110 transition-transform">
-                                        {mech.name[0]}
-                                    </div>
-                                    <div>
-                                        <p className="text-white font-black uppercase text-xs tracking-tight">{mech.name}</p>
-                                        <p className="text-neutral-500 text-[9px] font-bold uppercase tracking-widest mt-0.5">Specialist</p>
-                                    </div>
-                                </div>
-                                <div className="text-right">
-                                    <p className="text-2xl font-black text-white italic">{mech.jobsCompleted}</p>
-                                    <p className="text-[9px] text-neutral-600 font-black uppercase tracking-widest">Completed</p>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            )}
 
             {/* Recent Urgent Jobs */}
             <div className="bg-neutral-900/40 backdrop-blur-xl border border-neutral-800 rounded-[2.5rem] overflow-hidden shadow-2xl">

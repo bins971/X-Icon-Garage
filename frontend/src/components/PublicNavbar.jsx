@@ -12,11 +12,6 @@ const PublicNavbar = () => {
 
     const isActive = (path) => location.pathname === path;
 
-    const handleLogout = () => {
-        logout();
-        navigate('/');
-    };
-
     const navLinks = [
         { name: 'Home', path: '/' },
         { name: 'Services', path: '/#services' },
@@ -65,7 +60,7 @@ const PublicNavbar = () => {
                                 MY GARAGE
                             </Link>
                             <button
-                                onClick={handleLogout}
+                                onClick={logout}
                                 className="bg-neutral-800 hover:bg-neutral-700 text-white px-6 py-3 rounded-2xl text-xs font-black uppercase tracking-widest transition-all active:scale-95"
                             >
                                 SIGN OUT
@@ -80,7 +75,7 @@ const PublicNavbar = () => {
                                 STAFF PANEL
                             </Link>
                             <button
-                                onClick={handleLogout}
+                                onClick={logout}
                                 className="bg-neutral-800 hover:bg-neutral-700 text-white px-6 py-3 rounded-2xl text-xs font-black uppercase tracking-widest transition-all active:scale-95"
                             >
                                 SIGN OUT
