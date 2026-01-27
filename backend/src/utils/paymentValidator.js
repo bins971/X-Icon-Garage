@@ -28,15 +28,20 @@ const validateCardNumber = (cardNumber) => {
 
 /**
  * Validates Philippine GCash mobile number format
- * Accepts: 917xxxxxxx, 0917xxxxxxx, +63917xxxxxxx
+ * Accepts: 9xxxxxxxxx (10 digits), 09xxxxxxxxx (11 digits), +639xxxxxxxxx
  * @param {string} phone 
  * @returns {boolean}
  */
 const validateGCashNumber = (phone) => {
-    // Regex for Philippine mobile numbers
-    // (0|9|\+63) followed by 9 additional digits
-    const regex = /^(09|\+639|9)\d{9}$/;
-    return regex.test(phone.replace(/\s/g, ''));
+    // Remove all spaces
+    const cleaned = phone.replace(/\s/g, '');
+
+    // Accept formats:
+    // 09xxxxxxxxx (11 digits starting with 09)
+    // 9xxxxxxxxx (10 digits starting with 9)
+    // +639xxxxxxxxx (13 chars starting with +639)
+    const regex = /^(09\d{9}|9\d{9}|\+639\d{9})$/;
+    return regex.test(cleaned);
 };
 
 /**

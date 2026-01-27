@@ -38,16 +38,30 @@ router.get('/public/parts', async (req, res) => {
 router.post('/public/order', async (req, res) => {
     const { customerName, email, phone, items, totalAmount, paymentMethod } = req.body;
 
+    console.log('[ORDER] Received order request:', {
+        customerName,
+        email,
+        phone,
+        itemsCount: items?.length,
+        totalAmount,
+        paymentMethod,
+        gcashNumber: req.body.gcashNumber,
+        cardNumber: req.body.cardNumber
+    });
+
     if (!customerName || !email || !items || items.length === 0) {
+        console.log('[ORDER] Validation failed: Missing required fields');
         return res.status(400).json({ message: 'Invalid order data.' });
     }
 
     // Payment Validation
     if (paymentMethod === 'CARD' && !validateCardNumber(req.body.cardNumber || '')) {
+        console.log('[ORDER] Card validation failed:', req.body.cardNumber);
         return res.status(400).json({ message: 'Invalid credit card number.' });
     }
 
     if (paymentMethod === 'GCASH' && !validateGCashNumber(req.body.gcashNumber || '')) {
+        console.log('[ORDER] GCash validation failed:', req.body.gcashNumber);
         return res.status(400).json({ message: 'Invalid GCash phone number.' });
     }
 
@@ -60,9 +74,10 @@ router.post('/public/order', async (req, res) => {
             [id, customerName, email, phone, JSON.stringify(items), totalAmount, paymentMethod || 'CASH']
         );
 
+        console.log('[ORDER] Order created successfully:', id);
         res.status(201).json({ message: 'Order placed successfully.', id });
     } catch (error) {
-        console.error('Order Error:', error);
+        console.error('[ORDER] Database error:', error);
         res.status(500).json({ message: 'Server error' });
     }
 });
@@ -142,10 +157,10 @@ router.patch('/orders/:id', protect, authorize('ADMIN', 'ADVISOR'), async (req, 
         console.log(`[Shop] Updating order ${id} to status ${status}`);
 
         // Fetch order details for notification
-        const order = await db.get('SELECT customername as "customerName", email FROM online_orders WHERE id = ?::uuid', [id]);
+        const order = await db.get('SELECT customername as "customerName", email FROM online_orders WHERE id = ?', [id]);
 
         await db.run(
-            'UPDATE online_orders SET status = ?, updatedat = CURRENT_TIMESTAMP WHERE id = ?::uuid',
+            'UPDATE online_orders SET status = ?, updatedat = CURRENT_TIMESTAMP WHERE id = ?',
             [status, id]
         );
 

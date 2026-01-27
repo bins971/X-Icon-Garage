@@ -13,6 +13,7 @@ import {
     ShoppingCart,
     ChevronLeft,
     ChevronRight,
+    ShieldAlert
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import logo from '../assets/logo_clean.png';
@@ -34,6 +35,7 @@ const Sidebar = ({ isOpen, onClose }) => {
         { name: 'WEB ORDERS', icon: <ShoppingCart size={18} />, path: '/dashboard/orders', roles: ['ADMIN', 'ADVISOR', 'ACCOUNTANT'] },
         { name: 'INVENTORY', icon: <Package size={18} />, path: '/dashboard/inventory', roles: ['ADMIN', 'ADVISOR', 'ACCOUNTANT'] },
         { name: 'INVOICES', icon: <FileText size={18} />, path: '/dashboard/invoices', roles: ['ADMIN', 'ADVISOR', 'ACCOUNTANT'] },
+        { name: 'SECURITY', icon: <ShieldAlert size={18} />, path: '/dashboard/security', roles: ['ADMIN'] },
         { name: 'MY GARAGE', icon: <Wrench size={18} />, path: '/my-garage', roles: ['CUSTOMER'] },
     ];
 
@@ -127,9 +129,9 @@ const Sidebar = ({ isOpen, onClose }) => {
                 isOpen={showLogoutConfirm}
                 onClose={() => setShowLogoutConfirm(false)}
                 onConfirm={handleLogout}
-                title="Wait! Signing Out?"
-                message="Are you sure you want to leave your session? You'll need to log back in to access your garage."
-                confirmLabel="Yes, Sign Me Out"
+                title="Sign Out?"
+                message="You'll need to log back in to access the system."
+                confirmLabel="Sign Out"
             />
         </aside>
     );

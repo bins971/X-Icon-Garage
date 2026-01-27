@@ -5,6 +5,8 @@ const jwt = require('jsonwebtoken');
 const { getDb } = require('../config/database');
 const { protect } = require('../middleware/auth');
 const crypto = require('crypto');
+const speakeasy = require('speakeasy');
+const QRCode = require('qrcode');
 
 // @route   POST /api/auth/register
 router.post('/register', async (req, res) => {
@@ -78,13 +80,24 @@ router.post('/login', async (req, res) => {
 
     try {
         const user = await db.get(`
-            SELECT u.id, u.username, u.password, u.name, u.role, c.email, c.phone, c.profileimage as "profileImage"
+            SELECT u.id, u.username, u.password, u.name, u.role, u."twoFactorEnabled", c.email, c.phone, c.profileimage as "profileImage"
             FROM users u
             LEFT JOIN customers c ON u.id = c.userId
             WHERE u.username = ?
         `, [username]);
 
         if (user && (await bcrypt.compare(password, user.password))) {
+            if (user.twoFactorEnabled) {
+                return res.json({
+                    require2FA: true,
+                    tempToken: jwt.sign(
+                        { id: user.id, isPending2FA: true },
+                        process.env.JWT_SECRET || 'secret123',
+                        { expiresIn: '5m' }
+                    )
+                });
+            }
+
             const token = jwt.sign(
                 {
                     id: user.id,
@@ -116,6 +129,53 @@ router.post('/login', async (req, res) => {
 
 
 const { upload } = require('../config/cloudinary');
+
+// @route   POST /api/auth/login/verify-2fa
+router.post('/login/verify-2fa', async (req, res) => {
+    const { tempToken, token } = req.body;
+    const db = await getDb();
+
+    try {
+        const decoded = jwt.verify(tempToken, process.env.JWT_SECRET || 'secret123');
+        if (!decoded.isPending2FA) {
+            return res.status(401).json({ message: 'Invalid session' });
+        }
+
+        const user = await db.get(`
+            SELECT u.id, u.username, u.name, u.role, u."twoFactorSecret", c.profileimage as "profileImage"
+            FROM users u
+            LEFT JOIN customers c ON u.id = c.userId
+            WHERE u.id = ?
+        `, [decoded.id]);
+
+        const verified = speakeasy.totp.verify({
+            secret: user.twoFactorSecret,
+            encoding: 'base32',
+            token: token
+        });
+
+        if (!verified) {
+            return res.status(401).json({ message: 'Invalid 2FA token' });
+        }
+
+        const finalToken = jwt.sign(
+            { id: user.id, username: user.username, role: user.role, name: user.name, profileImage: user.profileImage },
+            process.env.JWT_SECRET || 'secret123',
+            { expiresIn: '30d' }
+        );
+
+        res.json({
+            id: user.id,
+            username: user.username,
+            name: user.name,
+            role: user.role,
+            token: finalToken,
+            profileImage: user.profileImage
+        });
+    } catch (error) {
+        res.status(401).json({ message: 'Session expired' });
+    }
+});
 
 // @route   GET /api/auth/me
 router.get('/me', protect, async (req, res) => {
@@ -160,6 +220,116 @@ router.put('/profile', protect, upload.single('profileImage'), async (req, res) 
         `, [userId]);
 
         res.json(updatedUser);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// @route   PUT /api/auth/security/pin
+router.put('/security/pin', protect, async (req, res) => {
+    const { currentPin, newPin, password } = req.body;
+    const db = await getDb();
+    const userId = req.user.id;
+
+    try {
+        const user = await db.get('SELECT password, "securityPin" FROM users WHERE id = ?', [userId]);
+
+        // Verify identity: requires password OR current valid PIN
+        let verified = false;
+        if (password) {
+            verified = await bcrypt.compare(password, user.password);
+        } else if (currentPin && user.securityPin) {
+            verified = await bcrypt.compare(currentPin, user.securityPin);
+        } else if (!user.securityPin) {
+            // First time setting PIN, require password
+            verified = await bcrypt.compare(password, user.password);
+        }
+
+        if (!verified) {
+            return res.status(401).json({ message: 'Identity verification failed. Invalid password or current PIN.' });
+        }
+
+        if (!newPin || newPin.length !== 6 || !/^\d+$/.test(newPin)) {
+            return res.status(400).json({ message: 'PIN must be exactly 6 digits.' });
+        }
+
+        const hashedPin = await bcrypt.hash(newPin, 10);
+        await db.run('UPDATE users SET "securityPin" = ? WHERE id = ?', [hashedPin, userId]);
+
+        res.json({ message: 'Security PIN updated successfully.' });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// @route   POST /api/auth/2fa/setup
+router.post('/2fa/setup', protect, async (req, res) => {
+    try {
+        const secret = speakeasy.generateSecret({
+            name: `X-ICON Garage (${req.user.username})`
+        });
+
+        // We don't save yet, just return it for the user to scan
+        const qrCodeUrl = await QRCode.toDataURL(secret.otpauth_url);
+
+        res.json({
+            secret: secret.base32,
+            qrCode: qrCodeUrl
+        });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// @route   POST /api/auth/2fa/enable
+router.post('/2fa/enable', protect, async (req, res) => {
+    const { secret, token } = req.body;
+    const db = await getDb();
+
+    try {
+        const verified = speakeasy.totp.verify({
+            secret: secret,
+            encoding: 'base32',
+            token: token
+        });
+
+        if (verified) {
+            await db.run(
+                'UPDATE users SET "twoFactorSecret" = ?, "twoFactorEnabled" = TRUE WHERE id = ?',
+                [secret, req.user.id]
+            );
+            res.json({ message: '2FA enabled successfully.' });
+        } else {
+            res.status(400).json({ message: 'Invalid token. Verification failed.' });
+        }
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// @route   POST /api/auth/2fa/disable
+router.post('/2fa/disable', protect, async (req, res) => {
+    const { token } = req.body;
+    const db = await getDb();
+
+    try {
+        const user = await db.get('SELECT "twoFactorSecret" FROM users WHERE id = ?', [req.user.id]);
+
+        const verified = speakeasy.totp.verify({
+            secret: user.twoFactorSecret,
+            encoding: 'base32',
+            token: token
+        });
+
+        if (verified) {
+            await db.run(
+                'UPDATE users SET "twoFactorSecret" = NULL, "twoFactorEnabled" = FALSE WHERE id = ?',
+                [req.user.id]
+            );
+            res.json({ message: '2FA disabled successfully.' });
+        } else {
+            res.status(400).json({ message: 'Invalid token. Verification failed.' });
+        }
     } catch (error) {
         res.status(500).json({ message: error.message });
     }

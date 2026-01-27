@@ -125,9 +125,11 @@ async function initializeDb() {
 
             // Migration: Add securityPin to users
             try {
-                await client.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS securityPin TEXT');
+                await client.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS "securityPin" TEXT');
+                await client.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS "twoFactorSecret" TEXT');
+                await client.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS "twoFactorEnabled" BOOLEAN DEFAULT FALSE');
             } catch (err) {
-                console.log('Note: users.securityPin already exists');
+                console.log('Note: users security columns check handled');
             }
 
             // Customers table

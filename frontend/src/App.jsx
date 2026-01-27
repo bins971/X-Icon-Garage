@@ -25,6 +25,7 @@ import InventoryList from './pages/InventoryList';
 import InvoiceList from './pages/InvoiceList';
 import ReceiptView from './pages/ReceiptView';
 import CustomerHistory from './pages/CustomerHistory';
+import SecuritySettings from './pages/SecuritySettings';
 
 import PublicNavbar from './components/PublicNavbar';
 import Home from './pages/Home';
@@ -90,6 +91,7 @@ const App = () => {
               <Route path="orders" element={<OrderManager />} />
               <Route path="inventory" element={<InventoryList />} />
               <Route path="invoices" element={<InvoiceList />} />
+              <Route path="security" element={<SecuritySettings />} />
               <Route path="reports" element={<div className="p-8"><h1 className="text-2xl font-bold">Business Reports</h1><p className="mt-4 text-slate-400 border-l-4 border-blue-500 pl-4">Advanced analytics are available on the main Dashboard.</p></div>} />
             </Route>
 

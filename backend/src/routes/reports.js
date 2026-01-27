@@ -3,6 +3,7 @@ const router = express.Router();
 const { getDb } = require('../config/database');
 const { protect, authorize } = require('../middleware/auth');
 const ExcelJS = require('exceljs');
+const speakeasy = require('speakeasy');
 
 
 
@@ -229,14 +230,12 @@ router.get('/activity', protect, async (req, res) => {
     }
 });
 
-const { logActivity } = require('../utils/logger');
-
 router.post('/verify-pin', protect, authorize('ADMIN'), async (req, res) => {
     const { pin } = req.body;
     const db = await getDb();
     try {
-        const user = await db.get('SELECT securityPin FROM users WHERE id = ?', [req.user.id]);
-        const storedPin = user?.securityPin || user?.securitypin;
+        const user = await db.get('SELECT "securityPin" FROM users WHERE id = ?', [req.user.id]);
+        const storedPin = user?.securityPin;
 
         if (!storedPin) return res.status(403).json({ message: 'No PIN set' });
 
@@ -259,11 +258,9 @@ router.post('/payout', protect, authorize('ADMIN'), async (req, res) => {
     const db = await getDb();
     try {
         // 1. Verify Security PIN
-        const user = await db.get('SELECT securityPin FROM users WHERE id = ?', [req.user.id]);
-        const storedPin = user?.securityPin || user?.securitypin;
+        const user = await db.get('SELECT "securityPin", "twoFactorSecret", "twoFactorEnabled" FROM users WHERE id = ?', [req.user.id]);
+        const storedPin = user?.securityPin;
 
-        // Fail-safe for this demo: if no pin is set, we treat '123456' as the default requirement but we need to hash it? 
-        // Actually, let's enforce db check.
         if (!storedPin) {
             return res.status(403).json({ message: 'Security PIN not configured for this account.' });
         }
@@ -272,6 +269,19 @@ router.post('/payout', protect, authorize('ADMIN'), async (req, res) => {
         if (!isMatch) {
             await logActivity(req.user.id, 'PAYOUT_FAIL', 'USER', req.user.id, 'Unauthorized payout attempt: Invalid PIN');
             return res.status(401).json({ message: 'Incorrect Security PIN. Transaction denied.' });
+        }
+
+        // 1.5 Verify 2FA if enabled
+        if (user.twoFactorEnabled) {
+            const { twoFactorToken } = req.body;
+            if (!twoFactorToken) return res.status(401).json({ message: '2FA Token required' });
+
+            const verified = speakeasy.totp.verify({
+                secret: user.twoFactorSecret,
+                encoding: 'base32',
+                token: twoFactorToken
+            });
+            if (!verified) return res.status(401).json({ message: 'Invalid 2FA token' });
         }
 
         // 2. Check balance

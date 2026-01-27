@@ -48,6 +48,7 @@ const Dashboard = () => {
     const [pin, setPin] = useState('');
     const [reportType, setReportType] = useState(null); // 'WITHDRAW' or 'SALES_EXCEL'
     const [step, setStep] = useState('PIN');
+    const [twoFactorToken, setTwoFactorToken] = useState('');
     const [withdrawMethod, setWithdrawMethod] = useState('');
     const [accountNumber, setAccountNumber] = useState('');
 
@@ -430,7 +431,11 @@ const Dashboard = () => {
                                                     if (reportType === 'SALES_EXCEL') {
                                                         handleExportSalesExcel();
                                                     } else {
-                                                        setStep('SELECT');
+                                                        if (user?.twoFactorEnabled) {
+                                                            setStep('2FA');
+                                                        } else {
+                                                            setStep('SELECT');
+                                                        }
                                                     }
                                                 }).catch(err => {
                                                     notify.error(err.response?.data?.message || 'Invalid Security PIN');
@@ -440,6 +445,42 @@ const Dashboard = () => {
                                             className="flex-1 bg-amber-500 hover:bg-amber-400 disabled:opacity-50 disabled:bg-neutral-800 text-black py-4 rounded-xl font-black uppercase tracking-widest text-xs transition-all shadow-xl shadow-amber-500/20 active:scale-95"
                                         >
                                             {reportType === 'SALES_EXCEL' ? 'Verify & Download' : 'Verify & Continue'}
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Step 1.5: 2FA Verification */}
+                            {step === '2FA' && (
+                                <div className="space-y-6">
+                                    <div className="text-center">
+                                        <div className="w-12 h-12 bg-blue-500/10 rounded-xl flex items-center justify-center mx-auto mb-2 border border-blue-500/20">
+                                            <Smartphone size={24} className="text-blue-500" />
+                                        </div>
+                                        <p className="text-[10px] font-black text-neutral-500 uppercase tracking-widest">Secondary Verification Required</p>
+                                    </div>
+                                    <input
+                                        type="text"
+                                        autoFocus
+                                        maxLength={6}
+                                        placeholder="000000"
+                                        className="w-full bg-neutral-950 border border-neutral-800 text-center text-3xl font-black text-white py-4 rounded-2xl focus:border-blue-500 outline-none tracking-[0.5em] transition-all"
+                                        value={twoFactorToken}
+                                        onChange={(e) => setTwoFactorToken(e.target.value.replace(/\D/g, ''))}
+                                    />
+                                    <div className="flex gap-4">
+                                        <button
+                                            onClick={() => { setStep('PIN'); setTwoFactorToken(''); }}
+                                            className="flex-1 bg-neutral-800 text-white py-3 rounded-xl font-black uppercase text-[10px] tracking-widest"
+                                        >
+                                            Back
+                                        </button>
+                                        <button
+                                            disabled={twoFactorToken.length < 6}
+                                            onClick={() => setStep('SELECT')}
+                                            className="flex-1 bg-blue-600 hover:bg-blue-500 text-white py-3 rounded-xl font-black uppercase text-[10px] tracking-widest transition-all"
+                                        >
+                                            Verify & Continue
                                         </button>
                                     </div>
                                 </div>
@@ -519,7 +560,8 @@ const Dashboard = () => {
                                                     amount: wallet.availableBalance,
                                                     method: withdrawMethod,
                                                     accountNumber: accountNumber,
-                                                    pin: pin
+                                                    pin: pin,
+                                                    twoFactorToken: user?.twoFactorEnabled ? twoFactorToken : undefined
                                                 }).then(() => {
                                                     notify.success('Transferred Successfully!');
                                                     setShowWithdraw(false);

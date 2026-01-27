@@ -1,5 +1,6 @@
 import React from 'react';
-import { AlertCircle, X } from 'lucide-react';
+import ReactDOM from 'react-dom';
+import { AlertCircle } from 'lucide-react';
 
 const ConfirmModal = ({
     isOpen,
@@ -33,10 +34,40 @@ const ConfirmModal = ({
 
     const color = colors[type] || colors.danger;
 
-    return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 animate-in fade-in duration-200">
-            <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={onClose}></div>
-            <div className="relative bg-neutral-900 border border-neutral-800 p-8 rounded-[2.5rem] w-full max-w-sm shadow-2xl animate-in zoom-in-95 duration-300">
+    const modalContent = (
+        <div
+            className="fixed top-0 left-0 right-0 bottom-0 z-[99999] animate-in fade-in duration-200"
+            style={{
+                position: 'fixed',
+                inset: 0,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '1rem'
+            }}
+        >
+            {/* Backdrop */}
+            <div
+                className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+                onClick={onClose}
+                style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0
+                }}
+            ></div>
+
+            {/* Modal Content */}
+            <div
+                className="relative bg-neutral-900 border border-neutral-800 p-8 rounded-[2.5rem] w-full shadow-2xl animate-in zoom-in-95 duration-300"
+                style={{
+                    position: 'relative',
+                    maxWidth: '24rem',
+                    margin: '0 auto'
+                }}
+            >
                 <div className="flex flex-col items-center text-center">
                     <div className={`h-16 w-16 rounded-full ${color.bg} flex items-center justify-center mb-6 ${color.icon}`}>
                         <AlertCircle size={32} />
@@ -71,6 +102,9 @@ const ConfirmModal = ({
             </div>
         </div>
     );
+
+    // Use React Portal to render modal at document.body level, outside of parent component hierarchy
+    return ReactDOM.createPortal(modalContent, document.body);
 };
 
 export default ConfirmModal;
