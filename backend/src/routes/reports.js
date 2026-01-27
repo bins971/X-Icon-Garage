@@ -172,6 +172,7 @@ router.get('/activity', protect, async (req, res) => {
         const recentJobs = await db.all(`
             SELECT 
                 j.id, j.jobnumber as "jobNumber", j.status, j.priority, j.createdat as "createdAt", j.updatedat as "updatedAt",
+                c.id as "customerId",
                 c.name as "customerName",
                 v.make, v.model,
                 u.name as "mechanicName"

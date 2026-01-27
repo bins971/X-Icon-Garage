@@ -1,12 +1,13 @@
-import React, { useState, useEffect } from 'react';
-import { Calendar, CheckCircle, XCircle, Clock, AlertCircle } from 'lucide-react';
+import { Calendar, CheckCircle, XCircle, Clock, AlertCircle, Trash2, Filter } from 'lucide-react';
 import { useNotification } from '../context/NotificationContext';
 import api from '../api/client';
+import ConfirmModal from '../components/ConfirmModal';
 
 const AppointmentManager = () => {
     const notify = useNotification();
     const [appointments, setAppointments] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [confirmAction, setConfirmAction] = useState({ show: false, id: null, type: 'delete' });
 
     const fetchAppointments = async () => {
         try {
@@ -31,9 +32,40 @@ const AppointmentManager = () => {
         }
     };
 
+    const handleDelete = async (id) => {
+        try {
+            await api.delete(`/bookings/${id}`);
+            notify.success('Appointment removed');
+            fetchAppointments();
+        } catch (error) {
+            notify.error('Failed to delete appointment');
+        }
+    };
+
+    const handlePurge = async () => {
+        try {
+            const res = await api.delete('/bookings/purge');
+            notify.success(res.data.message);
+            fetchAppointments();
+        } catch (error) {
+            notify.error('Failed to purge appointments');
+        }
+    };
+
     return (
         <div className="space-y-6 animate-in fade-in duration-500">
-            <h1 className="text-3xl font-bold text-white">Appointment Requests</h1>
+            <div className="flex justify-between items-center">
+                <div>
+                    <h1 className="text-3xl font-bold text-white tracking-tighter uppercase italic">Appointment Requests</h1>
+                    <p className="text-neutral-500 font-bold uppercase tracking-widest text-xs mt-1">Manage service bookings and scheduling</p>
+                </div>
+                <button
+                    onClick={() => setConfirmAction({ show: true, id: 'all', type: 'purge' })}
+                    className="flex items-center gap-2 px-4 py-2 bg-neutral-800 hover:bg-red-500/10 hover:text-red-500 text-neutral-400 rounded-xl text-xs font-black uppercase tracking-widest transition-all"
+                >
+                    <Trash2 size={16} /> Purge Inactive
+                </button>
+            </div>
 
             <div className="grid grid-cols-1 gap-4">
                 {appointments.map(appt => (
@@ -80,6 +112,16 @@ const AppointmentManager = () => {
                                 </div>
                             )}
 
+                            {appt.status !== 'PENDING' && (
+                                <button
+                                    onClick={() => setConfirmAction({ show: true, id: appt.id, type: 'delete' })}
+                                    className="p-2 text-neutral-600 hover:text-red-500 transition-colors"
+                                    title="Delete Record"
+                                >
+                                    <Trash2 size={18} />
+                                </button>
+                            )}
+
                             {appt.status === 'CONFIRMED' && (
                                 <button
                                     onClick={() => updateStatus(appt.id, 'COMPLETED')}
@@ -98,6 +140,17 @@ const AppointmentManager = () => {
                     </div>
                 )}
             </div>
+
+            <ConfirmModal
+                isOpen={confirmAction.show}
+                onClose={() => setConfirmAction({ show: false, id: null, type: 'delete' })}
+                onConfirm={confirmAction.type === 'purge' ? handlePurge : () => handleDelete(confirmAction.id)}
+                title={confirmAction.type === 'purge' ? "Purge Inactive?" : "Delete Appointment?"}
+                message={confirmAction.type === 'purge'
+                    ? "This will permanently remove all CANCELLED and COMPLETED appointments from the database."
+                    : "Are you sure you want to remove this appointment record?"}
+                confirmLabel={confirmAction.type === 'purge' ? "Yes, Purge All" : "Yes, Delete"}
+            />
         </div>
     );
 };

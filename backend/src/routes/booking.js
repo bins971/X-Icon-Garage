@@ -128,4 +128,28 @@ router.patch('/:id', protect, authorize('ADMIN', 'ADVISOR'), async (req, res) =>
     }
 });
 
+// @access  Private (Admin)
+router.delete('/purge', protect, authorize('ADMIN'), async (req, res) => {
+    try {
+        const db = await getDb();
+        const result = await db.run("DELETE FROM appointments WHERE status IN ('CANCELLED', 'COMPLETED')");
+        res.json({ message: `${result.changes} inactive appointments purged` });
+    } catch (error) {
+        console.error('Purge Bookings Error:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+// @access  Private (Admin)
+router.delete('/:id', protect, authorize('ADMIN'), async (req, res) => {
+    try {
+        const db = await getDb();
+        await db.run('DELETE FROM appointments WHERE id = ?', [req.params.id]);
+        res.json({ message: 'Appointment removed' });
+    } catch (error) {
+        console.error('Delete Booking Error:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
 module.exports = router;

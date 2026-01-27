@@ -97,49 +97,52 @@ const PartsShop = () => {
                             </button>
                         </div>
 
-                        {/* Cart Items */}
-                        <div className="flex-1 overflow-y-auto p-8 space-y-4 scrollbar-hide">
-                            {cart.length === 0 ? (
-                                <div className="h-full flex flex-col items-center justify-center text-center space-y-4 opacity-50">
-                                    <ShoppingBag size={48} className="text-neutral-600" />
-                                    <p className="text-neutral-400 font-bold uppercase tracking-widest text-sm">Your cart is empty</p>
-                                </div>
-                            ) : (
-                                cart.map(item => (
-                                    <div key={item.id} className="flex justify-between items-center p-4 bg-neutral-950/50 border border-neutral-800 rounded-2xl hover:border-neutral-700 transition-colors group">
-                                        <div className="flex items-center gap-4">
-                                            <div className="w-12 h-12 bg-neutral-900 rounded-lg flex items-center justify-center overflow-hidden border border-neutral-800">
-                                                {item.image ? (
-                                                    <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
-                                                ) : (
-                                                    <Package size={20} className="text-neutral-700" />
-                                                )}
-                                            </div>
-                                            <div>
-                                                <p className="text-sm font-black text-white uppercase tracking-tight group-hover:text-amber-500 transition-colors">{item.name}</p>
-                                                <p className="text-[10px] text-neutral-500 font-bold uppercase tracking-widest mt-1">Qty: {item.qty}</p>
-                                            </div>
-                                        </div>
-                                        <span className="text-lg font-black text-emerald-500 italic">₱{(item.sellingPrice * item.qty).toLocaleString()}</span>
+                        {/* Scrollable Content (Items + Form) */}
+                        <div className="flex-1 overflow-y-auto p-8 space-y-8 scrollbar-hide">
+                            {/* Cart Items List */}
+                            <div className="space-y-4">
+                                {cart.length === 0 ? (
+                                    <div className="py-20 flex flex-col items-center justify-center text-center space-y-4 opacity-50">
+                                        <ShoppingBag size={48} className="text-neutral-600" />
+                                        <p className="text-neutral-400 font-bold uppercase tracking-widest text-sm">Your cart is empty</p>
                                     </div>
-                                ))
-                            )}
-                        </div>
-
-                        {/* Footer / Checkout */}
-                        <div className="p-8 bg-neutral-900 border-t border-neutral-800 space-y-6">
-                            <div className="flex justify-between items-end">
-                                <span className="text-xs font-black text-neutral-500 uppercase tracking-[0.2em]">Total Amount</span>
-                                <span className="text-4xl font-black text-white italic tracking-tight">₱{total.toLocaleString()}</span>
+                                ) : (
+                                    cart.map(item => (
+                                        <div key={item.id} className="flex justify-between items-center p-4 bg-neutral-950/50 border border-neutral-800 rounded-2xl hover:border-neutral-700 transition-colors group">
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-12 h-12 bg-neutral-900 rounded-lg flex items-center justify-center overflow-hidden border border-neutral-800">
+                                                    {item.image ? (
+                                                        <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+                                                    ) : (
+                                                        <Package size={20} className="text-neutral-700" />
+                                                    )}
+                                                </div>
+                                                <div>
+                                                    <p className="text-sm font-black text-white uppercase tracking-tight group-hover:text-amber-500 transition-colors">{item.name}</p>
+                                                    <p className="text-[10px] text-neutral-500 font-bold uppercase tracking-widest mt-1">Qty: {item.qty}</p>
+                                                </div>
+                                            </div>
+                                            <span className="text-lg font-black text-emerald-500 italic">₱{(item.sellingPrice * item.qty).toLocaleString()}</span>
+                                        </div>
+                                    ))
+                                )}
                             </div>
 
+                            {/* Total & Checkout Section */}
                             {cart.length > 0 && (
-                                <CheckoutForm
-                                    cart={cart}
-                                    total={total}
-                                    onClear={() => setCart([])}
-                                    onCancel={() => setShowCart(false)}
-                                />
+                                <div className="pt-8 border-t border-neutral-800 space-y-8">
+                                    <div className="flex justify-between items-end">
+                                        <span className="text-xs font-black text-neutral-500 uppercase tracking-[0.2em]">Total Amount</span>
+                                        <span className="text-4xl font-black text-white italic tracking-tight">₱{total.toLocaleString()}</span>
+                                    </div>
+
+                                    <CheckoutForm
+                                        cart={cart}
+                                        total={total}
+                                        onClear={() => setCart([])}
+                                        onCancel={() => setShowCart(false)}
+                                    />
+                                </div>
                             )}
                         </div>
                     </div>
@@ -230,11 +233,11 @@ const CheckoutForm = ({ cart, total, onClear, onCancel }) => {
                     <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest">Contact Details</label>
                 </div>
                 <div className="space-y-3">
-                    <input type="text" placeholder="Full Name" className="w-full bg-neutral-950/50 border border-neutral-800 rounded-xl px-5 py-4 text-white text-sm focus:border-amber-500 focus:bg-neutral-950 focus:ring-1 focus:ring-amber-500/50 outline-none transition-all placeholder:text-neutral-700 font-medium"
+                    <input type="text" placeholder="Full Name" className="w-full bg-neutral-900 border border-neutral-700 rounded-xl px-5 py-4 text-white text-sm focus:border-amber-500 focus:bg-neutral-800 focus:ring-1 focus:ring-amber-500/50 outline-none transition-all placeholder:text-neutral-500 font-medium"
                         value={formData.customerName} onChange={e => setFormData({ ...formData, customerName: e.target.value })} />
-                    <input type="email" placeholder="Email Address" className="w-full bg-neutral-950/50 border border-neutral-800 rounded-xl px-5 py-4 text-white text-sm focus:border-amber-500 focus:bg-neutral-950 focus:ring-1 focus:ring-amber-500/50 outline-none transition-all placeholder:text-neutral-700 font-medium"
+                    <input type="email" placeholder="Email Address" className="w-full bg-neutral-900 border border-neutral-700 rounded-xl px-5 py-4 text-white text-sm focus:border-amber-500 focus:bg-neutral-800 focus:ring-1 focus:ring-amber-500/50 outline-none transition-all placeholder:text-neutral-500 font-medium"
                         value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} />
-                    <input type="tel" placeholder="Phone Number" className="w-full bg-neutral-950/50 border border-neutral-800 rounded-xl px-5 py-4 text-white text-sm focus:border-amber-500 focus:bg-neutral-950 focus:ring-1 focus:ring-amber-500/50 outline-none transition-all placeholder:text-neutral-700 font-medium"
+                    <input type="tel" placeholder="Phone Number" className="w-full bg-neutral-900 border border-neutral-700 rounded-xl px-5 py-4 text-white text-sm focus:border-amber-500 focus:bg-neutral-800 focus:ring-1 focus:ring-amber-500/50 outline-none transition-all placeholder:text-neutral-500 font-medium"
                         value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} />
                 </div>
             </div>

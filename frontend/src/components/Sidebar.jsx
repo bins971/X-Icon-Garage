@@ -16,12 +16,14 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import logo from '../assets/logo_clean.png';
+import ConfirmModal from './ConfirmModal';
 
 const Sidebar = ({ isOpen, onClose }) => {
     const { user, logout } = useAuth();
     const navigate = useNavigate();
     const location = useLocation();
     const [isCollapsed, setIsCollapsed] = useState(false);
+    const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
     const menuItems = [
         { name: 'DASHBOARD', icon: <LayoutDashboard size={18} />, path: '/dashboard', roles: ['ADMIN', 'ADVISOR', 'MECHANIC', 'ACCOUNTANT'] },
@@ -40,7 +42,8 @@ const Sidebar = ({ isOpen, onClose }) => {
 
     const handleLogout = () => {
         logout();
-        navigate('/login');
+        setShowLogoutConfirm(false);
+        navigate('/');
     };
 
     return (
@@ -103,7 +106,7 @@ const Sidebar = ({ isOpen, onClose }) => {
                         </div>
                     )}
                     <button
-                        onClick={handleLogout}
+                        onClick={() => setShowLogoutConfirm(true)}
                         className="w-full flex items-center gap-4 px-4 py-4 rounded-2xl text-xs font-black text-neutral-500 hover:text-red-500 hover:bg-red-500/10 transition-all duration-300 uppercase tracking-widest"
                     >
                         <LogOut size={18} />
@@ -119,6 +122,15 @@ const Sidebar = ({ isOpen, onClose }) => {
                     {isCollapsed ? <ChevronRight size={12} /> : <ChevronLeft size={12} />}
                 </button>
             </div>
+
+            <ConfirmModal
+                isOpen={showLogoutConfirm}
+                onClose={() => setShowLogoutConfirm(false)}
+                onConfirm={handleLogout}
+                title="Wait! Signing Out?"
+                message="Are you sure you want to leave your session? You'll need to log back in to access your garage."
+                confirmLabel="Yes, Sign Me Out"
+            />
         </aside>
     );
 };

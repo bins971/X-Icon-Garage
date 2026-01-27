@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
-import { Plus, Search, Mail, Phone, MapPin, Trash2, FileText } from 'lucide-react';
+import { Plus, Search, Mail, Phone, MapPin, Trash2, FileText, AlertCircle, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useNotification } from '../context/NotificationContext';
 import api from '../api/client';
+import ConfirmModal from '../components/ConfirmModal';
 
 const CustomerList = () => {
+    const notify = useNotification();
     const [customers, setCustomers] = useState([]);
     const [showModal, setShowModal] = useState(false);
 
@@ -14,6 +15,26 @@ const CustomerList = () => {
     };
 
     useEffect(() => { fetchCustomers(); }, []);
+
+    // Delete Modal State
+    const [deleteModal, setDeleteModal] = useState({ show: false, id: null, name: '' });
+
+    const promptDelete = (customer) => {
+        setDeleteModal({ show: true, id: customer.id, name: customer.name });
+    };
+
+    const confirmDelete = async () => {
+        try {
+            await api.delete(`/customers/${deleteModal.id}`);
+            fetchCustomers();
+            notify.success('Customer removed successfully');
+        } catch (error) {
+            console.error(error);
+            notify.error('Failed to delete customer');
+        } finally {
+            setDeleteModal({ show: false, id: null, name: '' });
+        }
+    };
 
     return (
         <div className="space-y-6 animate-in fade-in duration-500">
@@ -36,9 +57,7 @@ const CustomerList = () => {
                                 <Link to={`/dashboard/customers/${c.id}/history`} className="text-neutral-600 hover:text-amber-500 transition-colors" title="View Ledger & History">
                                     <FileText size={16} />
                                 </Link>
-                                <button onClick={() => {
-                                    // Logic to edit or delete could go here
-                                }} className="text-neutral-600 hover:text-red-500 transition-colors">
+                                <button onClick={() => promptDelete(c)} className="text-neutral-600 hover:text-red-500 transition-colors">
                                     <Trash2 size={16} />
                                 </button>
                             </div>
@@ -84,6 +103,15 @@ const CustomerList = () => {
             {showModal && (
                 <CustomerModal onClose={() => setShowModal(false)} onSuccess={() => { setShowModal(false); fetchCustomers(); }} />
             )}
+
+            <ConfirmModal
+                isOpen={deleteModal.show}
+                onClose={() => setDeleteModal({ show: false, id: null, name: '' })}
+                onConfirm={confirmDelete}
+                title="Delete Customer?"
+                message={`Are you sure you want to delete ${deleteModal.name}? This action will remove all associated vehicles and history.`}
+                confirmLabel="Yes, Delete"
+            />
         </div>
     );
 };

@@ -211,8 +211,8 @@ async function initializeDb() {
                 CREATE TABLE IF NOT EXISTS job_orders (
                     id UUID PRIMARY KEY,
                     jobNumber TEXT UNIQUE NOT NULL,
-                    customerId UUID NOT NULL REFERENCES customers(id),
-                    vehicleId UUID NOT NULL REFERENCES vehicles(id),
+                    customerId UUID NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+                    vehicleId UUID NOT NULL REFERENCES vehicles(id) ON DELETE CASCADE,
                     mechanicId UUID REFERENCES users(id),
                     complaint TEXT NOT NULL,
                     inspectionNotes TEXT,
@@ -244,7 +244,7 @@ async function initializeDb() {
                 CREATE TABLE IF NOT EXISTS invoices (
                     id UUID PRIMARY KEY,
                     invoiceNumber TEXT UNIQUE NOT NULL,
-                    jobOrderId UUID UNIQUE NOT NULL REFERENCES job_orders(id),
+                    jobOrderId UUID UNIQUE NOT NULL REFERENCES job_orders(id) ON DELETE CASCADE,
                     totalAmount DECIMAL NOT NULL,
                     discount DECIMAL DEFAULT 0,
                     tax DECIMAL DEFAULT 0,
@@ -306,6 +306,31 @@ async function initializeDb() {
                     updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             `);
+
+            // Migration: Add CASCADE to existing constraints
+            try {
+                // job_orders.customerId
+                await client.query(`
+                    ALTER TABLE job_orders DROP CONSTRAINT IF EXISTS job_orders_customerid_fkey;
+                    ALTER TABLE job_orders ADD CONSTRAINT job_orders_customerid_fkey 
+                    FOREIGN KEY (customerId) REFERENCES customers(id) ON DELETE CASCADE;
+                `);
+                // job_orders.vehicleId
+                await client.query(`
+                    ALTER TABLE job_orders DROP CONSTRAINT IF EXISTS job_orders_vehicleid_fkey;
+                    ALTER TABLE job_orders ADD CONSTRAINT job_orders_vehicleid_fkey 
+                    FOREIGN KEY (vehicleId) REFERENCES vehicles(id) ON DELETE CASCADE;
+                `);
+                // invoices.jobOrderId
+                await client.query(`
+                    ALTER TABLE invoices DROP CONSTRAINT IF EXISTS invoices_joborderid_fkey;
+                    ALTER TABLE invoices ADD CONSTRAINT invoices_joborderid_fkey 
+                    FOREIGN KEY (jobOrderId) REFERENCES job_orders(id) ON DELETE CASCADE;
+                `);
+                console.log('[DB] Migration: Cascading constraints updated.');
+            } catch (err) {
+                console.log('[DB] Migration Note: Cascade update handled or manual check required.', err.message);
+            }
 
             // Performance Packages table
             await client.query(`

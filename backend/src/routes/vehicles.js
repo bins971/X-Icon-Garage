@@ -43,14 +43,19 @@ router.post('/', protect, async (req, res) => {
     let { vin, plateNumber, make, model, year, color, customerId } = req.body;
     const db = await getDb();
 
+
     try {
-        if (req.user.role === 'CUSTOMER') {
+        if (req.user.role && req.user.role.toUpperCase() === 'CUSTOMER') {
             let customer = await db.get('SELECT id FROM customers WHERE userid = ?', [req.user.id]);
+
             if (!customer) {
+                console.log(`[Vehicle] No customer record found for user ${req.user.id}. Creating one...`);
                 const newCustomerId = crypto.randomUUID();
+                const email = req.user.username && req.user.username.includes('@') ? req.user.username : '';
+
                 await db.run(
-                    'INSERT INTO customers (id, name, phone, userid) VALUES (?, ?, ?, ?)',
-                    [newCustomerId, req.user.name || 'Customer', '', req.user.id]
+                    'INSERT INTO customers (id, name, phone, email, userid) VALUES (?, ?, ?, ?, ?)',
+                    [newCustomerId, req.user.name || 'Customer', '', email, req.user.id]
                 );
                 customer = { id: newCustomerId };
             }

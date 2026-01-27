@@ -74,8 +74,12 @@ const getSubject = (type, data) => {
             return `New Repair Job Started: ${data.jobNumber}`;
         case 'PAYMENT_RECEIVED':
             return `Payment Received - Receipt for ${data.invoiceNumber}`;
+        case 'INVOICE_GENERATED':
+            return `Billing Statement Ready: ${data.invoiceNumber}`;
         case 'JOB_READY':
             return `Project Completed: ${data.jobNumber} is ready for release`;
+        case 'JOB_STATUS_UPDATED':
+            return `Update on Job ${data.jobNumber}: ${data.status}`;
         case 'BOOKING_REQUESTED':
             return `Appointment Request Received: ${data.bookingRef}`;
         case 'APPOINTMENT_CONFIRMED':
@@ -101,8 +105,12 @@ const getContent = (type, data) => {
             return `Hello ${data.customerName}, your vehicle (${data.vehicle}) has been checked in. Your Job Order Number is ${data.jobNumber}. You can track it at /track using this number and your plate ${data.plateNumber}.`;
         case 'PAYMENT_RECEIVED':
             return `Hello ${data.customerName}, we received your payment of ${data.amount}. Your invoice ${data.invoiceNumber} is now ${data.status}. View your digital receipt here: /receipt/${data.invoiceId}`;
+        case 'INVOICE_GENERATED':
+            return `Hello ${data.customerName}, your billing statement for Job ${data.jobNumber} is now ready. Total amount due: ${data.totalAmount}. View your digital invoice here: /receipt/${data.invoiceId}`;
         case 'JOB_READY':
             return `Great news, ${data.customerName}! The work on your ${data.vehicle} is complete. Your final bill is ${data.totalAmount}. See you at the workshop!`;
+        case 'JOB_STATUS_UPDATED':
+            return `Hello ${data.customerName}, the status of your repair job (${data.jobNumber}) for your ${data.vehicle} has been updated to: ${data.status}.`;
         case 'BOOKING_REQUESTED':
             if (data.serviceType === 'Home Service' && data.address) {
                 return `Hi ${data.customerName}, we've received your Home Service request for ${data.date}. We will come to: ${data.address}. Reference: ${data.bookingRef}. We will contact you soon to confirm!`;

@@ -1,64 +1,115 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Car } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useNotification } from '../context/NotificationContext';
 import api from '../api/client';
+import useSearch from '../hooks/useSearch';
+import SearchBar from '../components/SearchBar';
+import { CardSkeleton } from '../components/Skeleton';
+import EmptyState from '../components/EmptyState';
+
 
 const VehicleList = () => {
     const [vehicles, setVehicles] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const { searchTerm, setSearchTerm, filteredData: filteredVehicles } = useSearch(vehicles, [
+        'plateNumber', 'make', 'model', 'customerName'
+    ]);
     const [showModal, setShowModal] = useState(false);
     const [selectedVehicle, setSelectedVehicle] = useState(null);
 
     const fetchVehicles = async () => {
-        const res = await api.get('/vehicles');
-        setVehicles(res.data);
+        setLoading(true);
+        try {
+            const res = await api.get('/vehicles');
+            setVehicles(res.data);
+        } finally {
+            setLoading(false);
+        }
     };
 
     useEffect(() => { fetchVehicles(); }, []);
 
+    const navigate = useNavigate();
+
+    const goToHistory = (vehicle) => {
+        if (vehicle?.customerId) {
+            navigate(`/dashboard/customers/${vehicle.customerId}/history`);
+        } else {
+            console.error('No customer ID found for vehicle', vehicle);
+        }
+    };
+
+    // Filtering Logic (Removed redundant check as useSearch handles it)
+
     return (
         <div className="space-y-6 animate-in fade-in duration-500">
-            <div className="flex justify-between items-center">
-                <h1 className="text-3xl font-bold text-white">Vehicles</h1>
-                <button onClick={() => setShowModal(true)} className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-3 rounded-xl flex items-center gap-2 transition-all active:scale-95 font-black text-xs uppercase tracking-widest shadow-xl shadow-blue-500/10">
-                    <Plus size={20} /> New Vehicle
-                </button>
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div>
+                    <h1 className="text-3xl font-bold text-white">Vehicles</h1>
+                    <p className="text-slate-400 mt-1">Manage and track all registered machines</p>
+                </div>
+                <div className="flex flex-col md:flex-row gap-4 w-full md:w-auto">
+                    <SearchBar
+                        value={searchTerm}
+                        onChange={setSearchTerm}
+                        placeholder="Search plate, make, or owner..."
+                        className="w-full md:w-64"
+                    />
+                    <button onClick={() => setShowModal(true)} className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-3 rounded-xl flex items-center gap-2 transition-all active:scale-95 font-black text-xs uppercase tracking-widest shadow-xl shadow-blue-500/10">
+                        <Plus size={20} /> New Vehicle
+                    </button>
+                </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {vehicles.map(v => (
-                    <div key={v.id} className="bg-slate-900 border border-slate-800 p-6 rounded-2xl hover:border-slate-700 transition-all flex flex-col gap-4">
-                        <div className="flex items-start gap-4">
-                            <div className="p-3 bg-blue-500/10 text-blue-500 rounded-xl">
-                                <Car size={24} />
+            {/* Vehicle Board */}
+            {loading ? (
+                <CardSkeleton count={6} />
+            ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {filteredVehicles.map(v => (
+                        <div key={v.id} className="bg-slate-900 border border-slate-800 p-6 rounded-2xl hover:border-slate-700 transition-all flex flex-col gap-4">
+                            <div className="flex items-start gap-4">
+                                <div className="p-3 bg-blue-500/10 text-blue-500 rounded-xl">
+                                    <Car size={24} />
+                                </div>
+                                <div>
+                                    <h3 className="text-lg font-bold text-white">{v.plateNumber}</h3>
+                                    <p className="text-slate-400">{v.year} {v.make} {v.model}</p>
+                                    <p className="text-sm text-slate-500 mt-1">{v.color} • VIN: {v.vin}</p>
+                                </div>
                             </div>
-                            <div>
-                                <h3 className="text-lg font-bold text-white">{v.plateNumber}</h3>
-                                <p className="text-slate-400">{v.year} {v.make} {v.model}</p>
-                                <p className="text-sm text-slate-500 mt-1">{v.color} • VIN: {v.vin}</p>
+                            <div className="pt-4 border-t border-slate-800 flex justify-between items-center">
+                                <div className="text-xs">
+                                    <p className="text-slate-500 uppercase font-black tracking-widest">Owner</p>
+                                    <p className="text-white font-bold">{v.customerName || 'N/A'}</p>
+                                </div>
+                                <button
+                                    onClick={() => setSelectedVehicle(v)}
+                                    className="text-blue-500 hover:text-blue-400 text-xs font-black uppercase tracking-widest"
+                                >
+                                    Details
+                                </button>
                             </div>
                         </div>
-                        <div className="pt-4 border-t border-slate-800 flex justify-between items-center">
-                            <div className="text-xs">
-                                <p className="text-slate-500 uppercase font-black tracking-widest">Owner</p>
-                                <p className="text-white font-bold">{v.customerName || 'N/A'}</p>
-                            </div>
-                            <button
-                                onClick={() => setSelectedVehicle(v)}
-                                className="text-blue-500 hover:text-blue-400 text-xs font-black uppercase tracking-widest"
-                            >
-                                Details
-                            </button>
-                        </div>
-                    </div>
-                ))}
-            </div>
+                    ))}
+                </div>
+            )}
+
+            {!loading && filteredVehicles.length === 0 && (
+                <EmptyState
+                    icon={Car}
+                    title="No Vehicles Found"
+                    message={searchTerm ? `No vehicles match "${searchTerm}"` : "Register a machine to begin tracking service history."}
+                />
+            )}
 
             {showModal && (
                 <VehicleModal onClose={() => setShowModal(false)} onSuccess={() => { setShowModal(false); fetchVehicles(); }} />
             )}
 
             {selectedVehicle && (
-                <VehicleDetailsModal vehicle={selectedVehicle} onClose={() => setSelectedVehicle(null)} />
+                <VehicleDetailsModal vehicle={selectedVehicle} onClose={() => setSelectedVehicle(null)} onNavigate={goToHistory} />
             )}
         </div>
     );
@@ -123,7 +174,7 @@ const VehicleModal = ({ onClose, onSuccess }) => {
     );
 };
 
-const VehicleDetailsModal = ({ vehicle, onClose }) => {
+const VehicleDetailsModal = ({ vehicle, onClose, onNavigate }) => {
     return (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center p-4 z-[60]">
             <div className="bg-neutral-900 border border-neutral-800 rounded-[2.5rem] p-10 w-full max-w-2xl shadow-2xl animate-in zoom-in-95 duration-300">
@@ -165,7 +216,10 @@ const VehicleDetailsModal = ({ vehicle, onClose }) => {
                     <button onClick={onClose} className="flex-1 bg-neutral-800 hover:bg-neutral-700 text-white py-4 rounded-2xl font-black uppercase tracking-widest text-xs transition-colors">
                         Close
                     </button>
-                    <button className="flex-1 bg-amber-500 hover:bg-amber-400 text-black py-4 rounded-2xl font-black uppercase tracking-widest text-xs shadow-xl shadow-amber-500/10 transition-all active:scale-95">
+                    <button
+                        onClick={() => onNavigate(vehicle)}
+                        className="flex-1 bg-amber-500 hover:bg-amber-400 text-black py-4 rounded-2xl font-black uppercase tracking-widest text-xs shadow-xl shadow-amber-500/10 transition-all active:scale-95"
+                    >
                         View Service History
                     </button>
                 </div>

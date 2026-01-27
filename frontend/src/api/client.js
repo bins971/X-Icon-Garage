@@ -21,4 +21,27 @@ api.interceptors.request.use(
     }
 );
 
+// Add a response interceptor to handle global errors
+api.interceptors.response.use(
+    (response) => response,
+    (error) => {
+        const { response } = error;
+        if (response) {
+            if (response.status === 401) {
+                // Token expired or invalid
+                localStorage.removeItem('token');
+                if (window.location.pathname !== '/login') {
+                    window.location.href = '/login?expired=true';
+                }
+            } else if (response.status === 500) {
+                console.error('SERVER_ERROR:', response.data);
+            }
+        } else {
+            // Network error
+            console.error('NETWORK_ERROR:', error.message);
+        }
+        return Promise.reject(error);
+    }
+);
+
 export default api;

@@ -43,21 +43,22 @@ app.use(express.json({ limit: '10kb' }));
 
 
 // 5. Rate Limiting
+// 5. Rate Limiting
 const limiter = rateLimit({
     windowMs: 10 * 60 * 1000,
-    max: 100,
+    max: 3000,
     message: { message: 'Too many requests from this IP, please try again after 10 minutes' }
 });
 
 const authLimiter = rateLimit({
     windowMs: 60 * 60 * 1000,
-    max: 10,
+    max: 100,
     message: { message: 'Too many login attempts, please try again after an hour.' }
 });
 
 const payoutLimiter = rateLimit({
     windowMs: 60 * 60 * 1000,
-    max: 5,
+    max: 50,
     message: { message: 'Maximum payout attempts reached. Please try again later.' }
 });
 

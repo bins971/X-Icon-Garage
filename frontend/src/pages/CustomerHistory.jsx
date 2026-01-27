@@ -79,8 +79,8 @@ const CustomerHistory = () => {
                         key={tab.id}
                         onClick={() => setActiveTab(tab.id)}
                         className={`flex items-center gap-2 px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === tab.id
-                                ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/20 scale-105'
-                                : 'bg-neutral-900 text-neutral-500 border border-neutral-800 hover:border-neutral-700'
+                            ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/20 scale-105'
+                            : 'bg-neutral-900 text-neutral-500 border border-neutral-800 hover:border-neutral-700'
                             }`}
                     >
                         {tab.icon} {tab.label}
@@ -101,14 +101,14 @@ const CustomerHistory = () => {
                                         <FileText size={24} />
                                     </div>
                                     <div>
-                                        <p className="text-white font-black uppercase tracking-tight">{inv.invoicenumber}</p>
+                                        <p className="text-white font-black uppercase tracking-tight">{inv.invoiceNumber}</p>
                                         <p className="text-neutral-500 text-[10px] font-bold uppercase tracking-widest mt-1">
-                                            {new Date(inv.createdat).toLocaleDateString()}
+                                            {new Date(inv.createdAt).toLocaleDateString()}
                                         </p>
                                     </div>
                                 </div>
                                 <div className="text-right">
-                                    <p className="text-xl font-black text-white italic">₱{inv.totalamount?.toLocaleString()}</p>
+                                    <p className="text-xl font-black text-white italic">₱{inv.totalAmount?.toLocaleString()}</p>
                                     <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${inv.status === 'PAID' ? 'bg-emerald-500/20 text-emerald-500' : 'bg-amber-500/20 text-amber-500'}`}>
                                         {inv.status}
                                     </span>
@@ -133,9 +133,9 @@ const CustomerHistory = () => {
                                         <Wrench size={24} />
                                     </div>
                                     <div>
-                                        <p className="text-white font-black uppercase tracking-tight">{job.jobnumber}</p>
+                                        <p className="text-white font-black uppercase tracking-tight">{job.jobNumber}</p>
                                         <p className="text-neutral-500 text-[10px] font-bold uppercase tracking-widest mt-1">
-                                            {job.make} {job.model} • {job.platenumber}
+                                            {job.make} {job.model} • {job.plateNumber}
                                         </p>
                                     </div>
                                 </div>
@@ -162,9 +162,9 @@ const CustomerHistory = () => {
                                         <Calendar size={24} />
                                     </div>
                                     <div>
-                                        <p className="text-white font-black uppercase tracking-tight">{appt.servicetype}</p>
+                                        <p className="text-white font-black uppercase tracking-tight">{appt.serviceType}</p>
                                         <p className="text-neutral-500 text-[10px] font-bold uppercase tracking-widest mt-1">
-                                            {new Date(appt.date).toLocaleDateString()}
+                                            {new Date(appt.createdAt).toLocaleDateString()}
                                         </p>
                                     </div>
                                 </div>
@@ -191,7 +191,7 @@ const CustomerHistory = () => {
                                         <Car size={24} />
                                     </div>
                                     <div>
-                                        <p className="text-white font-black uppercase tracking-tight">{v.platenumber}</p>
+                                        <p className="text-white font-black uppercase tracking-tight">{v.plateNumber}</p>
                                         <p className="text-neutral-500 text-xs font-bold uppercase tracking-widest mt-1">
                                             {v.year} {v.make} {v.model}
                                         </p>

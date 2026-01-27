@@ -350,7 +350,7 @@ const MyGarage = () => {
                                         </div>
                                         <div className="flex items-center gap-6 w-full sm:w-auto">
                                             <div className="text-right flex-1 sm:flex-initial">
-                                                <p className="text-white font-black text-sm tracking-tight">₱{(invoices.find(i => i.jobOrderId === job.id)?.totalAmount || job.estimatedCost).toLocaleString()}.00</p>
+                                                <p className="text-white font-black text-sm tracking-tight">₱{Number(invoices.find(i => i.jobOrderId === job.id)?.totalAmount || job.estimatedCost || 0).toLocaleString()}.00</p>
                                                 <p className="text-neutral-600 text-[10px] font-black uppercase tracking-widest mt-0.5">{invoices.find(i => i.jobOrderId === job.id) ? 'Payment Settled' : 'Awaiting Final Billing'}</p>
                                             </div>
                                             {invoices.find(i => i.jobOrderId === job.id) && (
