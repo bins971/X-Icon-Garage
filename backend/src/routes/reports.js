@@ -340,7 +340,7 @@ router.get('/export/sales-profit', protect, authorize('ADMIN'), async (req, res)
             SELECT 
                 createdAt as date,
                 'ONLINE_ORDER' as type,
-                'ORDER-' || SUBSTR(id, 1, 8) as ref,
+                'ORDER-' || SUBSTR(CAST(id AS TEXT), 1, 8) as ref,
                 customerName as customer,
                 totalAmount as revenue,
                 items

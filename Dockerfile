@@ -11,9 +11,10 @@ COPY package.json ./
 COPY frontend/package.json ./frontend/
 COPY backend/package.json ./backend/
 
-# Install dependencies (only production for backend, all for frontend build)
+# Install dependencies
 RUN npm install
 RUN npm install --prefix frontend
+RUN npm install --prefix backend
 
 # Copy source code
 COPY frontend ./frontend
