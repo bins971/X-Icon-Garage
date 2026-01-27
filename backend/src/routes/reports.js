@@ -2,6 +2,8 @@ const express = require('express');
 const router = express.Router();
 const { getDb } = require('../config/database');
 const { protect, authorize } = require('../middleware/auth');
+const ExcelJS = require('exceljs');
+
 
 
 // @route   GET /api/reports/dashboard
@@ -292,6 +294,125 @@ router.post('/payout', protect, authorize('ADMIN'), async (req, res) => {
         res.json({ message: 'Withdrawal successful', remainingBalance: available - amount });
     } catch (error) {
         res.status(500).json({ message: error.message });
+    }
+});
+
+// @route   GET /api/reports/export/sales-profit
+router.get('/export/sales-profit', protect, authorize('ADMIN'), async (req, res) => {
+    const db = await getDb();
+    try {
+        const workbook = new ExcelJS.Workbook();
+        const sheet = workbook.addWorksheet('Sales and Profit Report');
+
+        // Define Columns
+        sheet.columns = [
+            { header: 'Date', key: 'date', width: 20 },
+            { header: 'Type', key: 'type', width: 15 },
+            { header: 'Reference', key: 'ref', width: 20 },
+            { header: 'Customer', key: 'customer', width: 25 },
+            { header: 'Revenue (₱)', key: 'revenue', width: 15 },
+            { header: 'Est. Cost (₱)', key: 'cost', width: 15 },
+            { header: 'Net Profit (₱)', key: 'profit', width: 15 }
+        ];
+
+        // 1. Fetch Job Order Sales (Invoiced & Paid)
+        const jobSales = await db.all(`
+            SELECT 
+                i.createdAt as date,
+                'JOB_ORDER' as type,
+                i.invoiceNumber as ref,
+                c.name as customer,
+                i.totalAmount as revenue,
+                COALESCE((
+                    SELECT SUM(p.buyingPrice * jop.quantity)
+                    FROM job_order_parts jop
+                    JOIN parts p ON jop.partId = p.id
+                    WHERE jop.jobOrderId = i.jobOrderId
+                ), 0) as cost
+            FROM invoices i
+            JOIN job_orders jo ON i.jobOrderId = jo.id
+            JOIN customers c ON jo.customerId = c.id
+            WHERE i.status = 'PAID'
+        `);
+
+        // 2. Fetch Online Order Sales
+        const rawOnlineSales = await db.all(`
+            SELECT 
+                createdAt as date,
+                'ONLINE_ORDER' as type,
+                'ORDER-' || SUBSTR(id, 1, 8) as ref,
+                customerName as customer,
+                totalAmount as revenue,
+                items
+            FROM online_orders
+            WHERE status != 'CANCELLED'
+        `);
+
+        // Process Online Sales Costs
+        const allParts = await db.all('SELECT id, buyingPrice FROM parts');
+        const priceMap = allParts.reduce((acc, p) => ({ ...acc, [p.id]: p.buyingPrice }), {});
+
+        const onlineSales = rawOnlineSales.map(order => {
+            let cost = 0;
+            try {
+                const items = JSON.parse(order.items);
+                items.forEach(item => {
+                    const bPrice = priceMap[item.id] || 0;
+                    cost += bPrice * (item.quantity || 1);
+                });
+            } catch (e) { console.error('Error parsing items for cost calc', e); }
+
+            return {
+                ...order,
+                cost
+            };
+        });
+
+        // 3. Combine and Populate Sheet
+        const allTransactions = [...jobSales, ...onlineSales].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+        let totalRev = 0;
+        let totalCost = 0;
+
+        allTransactions.forEach(t => {
+            const profit = parseFloat(t.revenue) - parseFloat(t.cost);
+            totalRev += parseFloat(t.revenue);
+            totalCost += parseFloat(t.cost);
+
+            sheet.addRow({
+                date: new Date(t.date).toLocaleString(),
+                type: t.type,
+                ref: t.ref,
+                customer: t.customer,
+                revenue: parseFloat(t.revenue).toFixed(2),
+                cost: parseFloat(t.cost).toFixed(2),
+                profit: profit.toFixed(2)
+            });
+        });
+
+        // Summary Row
+        sheet.addRow({});
+        const summaryRow = sheet.addRow({
+            customer: 'GRAND TOTALS',
+            revenue: totalRev.toFixed(2),
+            cost: totalCost.toFixed(2),
+            profit: (totalRev - totalCost).toFixed(2)
+        });
+        summaryRow.font = { bold: true };
+
+        // Styling
+        sheet.getRow(1).font = { bold: true };
+        sheet.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE0E0E0' } };
+
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader('Content-Disposition', 'attachment; filename=Sales_Profit_Report.xlsx');
+
+        await workbook.xlsx.write(res);
+        res.end();
+
+    } catch (error) {
+        console.error('Excel Export Error:', error);
+        res.status(500).json({ message: 'Failed to generate report' });
     }
 });
 

@@ -46,6 +46,7 @@ const Dashboard = () => {
     const [wallet, setWallet] = useState(null);
     const [showWithdraw, setShowWithdraw] = useState(false);
     const [pin, setPin] = useState('');
+    const [reportType, setReportType] = useState(null); // 'WITHDRAW' or 'SALES_EXCEL'
     const [step, setStep] = useState('PIN');
     const [withdrawMethod, setWithdrawMethod] = useState('');
     const [accountNumber, setAccountNumber] = useState('');
@@ -93,6 +94,24 @@ const Dashboard = () => {
             link.click();
         } catch (error) {
             console.error('Export failed:', error);
+            notify.error('Failed to export revenue');
+        }
+    };
+
+    const handleExportSalesExcel = async () => {
+        try {
+            const response = await api.get('/reports/export/sales-profit', { responseType: 'blob' });
+            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', 'Sales_Profit_Report.xlsx');
+            document.body.appendChild(link);
+            link.click();
+            setShowWithdraw(false); // Close the PIN modal
+            setPin('');
+        } catch (error) {
+            console.error('Excel Export failed:', error);
+            notify.error('Failed to generate Excel report');
         }
     };
 
@@ -103,13 +122,26 @@ const Dashboard = () => {
                     <h1 className="text-3xl font-black text-white tracking-tight uppercase">Workshop Overview</h1>
                     <p className="text-neutral-500 mt-1 font-medium tracking-wide">REAL-TIME INSIGHTS & PERFORMANCE METRICS</p>
                 </div>
-                <button
-                    onClick={handleExportRevenue}
-                    className="flex items-center gap-2 bg-neutral-900 hover:bg-neutral-800 text-neutral-200 px-6 py-3 rounded-2xl transition-all border border-neutral-800 shadow-xl active:scale-95 font-black text-xs tracking-widest uppercase"
-                >
-                    <Download size={18} className="text-amber-500" />
-                    <span>Export Revenue</span>
-                </button>
+                <div className="flex items-center gap-3">
+                    <button
+                        onClick={handleExportRevenue}
+                        className="flex items-center gap-2 bg-neutral-900 hover:bg-neutral-800 text-neutral-200 px-4 py-3 rounded-2xl transition-all border border-neutral-800 shadow-xl active:scale-95 font-black text-[10px] tracking-widest uppercase"
+                    >
+                        <Download size={16} className="text-blue-500" />
+                        <span>CSV Export</span>
+                    </button>
+                    <button
+                        onClick={() => {
+                            setReportType('SALES_EXCEL');
+                            setStep('PIN');
+                            setShowWithdraw(true);
+                        }}
+                        className="flex items-center gap-2 bg-neutral-900 hover:bg-neutral-800 text-neutral-200 px-6 py-3 rounded-2xl transition-all border border-neutral-800 shadow-xl active:scale-95 font-black text-xs tracking-widest uppercase group"
+                    >
+                        <FileText size={18} className="text-emerald-500 group-hover:scale-110 transition-transform" />
+                        <span>Full Sales/Profit Report</span>
+                    </button>
+                </div>
             </div>
 
             {/* Key Metrics Grid */}
@@ -151,6 +183,8 @@ const Dashboard = () => {
                     <button
                         onClick={() => {
                             if ((wallet?.availableBalance || 0) <= 0) return notify.error('No funds available for withdrawal');
+                            setReportType('WITHDRAW');
+                            setStep('PIN');
                             setShowWithdraw(true);
                         }}
                         className="bg-amber-500 hover:bg-amber-400 text-black px-8 py-4 rounded-2xl font-black uppercase tracking-widest text-xs transition-all shadow-xl shadow-amber-500/20 active:scale-95 flex items-center gap-2"
@@ -393,7 +427,11 @@ const Dashboard = () => {
                                             disabled={!pin || pin.length < 6}
                                             onClick={() => {
                                                 api.post('/reports/verify-pin', { pin }).then(() => {
-                                                    setStep('SELECT');
+                                                    if (reportType === 'SALES_EXCEL') {
+                                                        handleExportSalesExcel();
+                                                    } else {
+                                                        setStep('SELECT');
+                                                    }
                                                 }).catch(err => {
                                                     notify.error(err.response?.data?.message || 'Invalid Security PIN');
                                                     setPin('');
@@ -401,7 +439,7 @@ const Dashboard = () => {
                                             }}
                                             className="flex-1 bg-amber-500 hover:bg-amber-400 disabled:opacity-50 disabled:bg-neutral-800 text-black py-4 rounded-xl font-black uppercase tracking-widest text-xs transition-all shadow-xl shadow-amber-500/20 active:scale-95"
                                         >
-                                            Verify & Continue
+                                            {reportType === 'SALES_EXCEL' ? 'Verify & Download' : 'Verify & Continue'}
                                         </button>
                                     </div>
                                 </div>
