@@ -1,17 +1,33 @@
-import { Plus, Search, Mail, Phone, MapPin, Trash2, FileText, AlertCircle, X } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Plus, Search, Mail, Phone, MapPin, Trash2, FileText, AlertCircle, X, Users } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useNotification } from '../context/NotificationContext';
 import api from '../api/client';
 import ConfirmModal from '../components/ConfirmModal';
+import useSearch from '../hooks/useSearch';
+import SearchBar from '../components/SearchBar';
+import EmptyState from '../components/EmptyState';
+import { CardSkeleton } from '../components/Skeleton';
 
 const CustomerList = () => {
     const notify = useNotification();
     const [customers, setCustomers] = useState([]);
+    const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
+    const { searchTerm, setSearchTerm, filteredData: filteredCustomers } = useSearch(customers, [
+        'name', 'email', 'phone'
+    ]);
 
     const fetchCustomers = async () => {
-        const res = await api.get('/customers');
-        setCustomers(res.data);
+        setLoading(true);
+        try {
+            const res = await api.get('/customers');
+            setCustomers(res.data);
+        } catch (error) {
+            console.error(error);
+        } finally {
+            setLoading(false);
+        }
     };
 
     useEffect(() => { fetchCustomers(); }, []);
@@ -38,66 +54,89 @@ const CustomerList = () => {
 
     return (
         <div className="space-y-6 animate-in fade-in duration-500">
-            <div className="flex justify-between items-center">
-                <h1 className="text-3xl font-bold text-white">Customers</h1>
-                <button onClick={() => setShowModal(true)} className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-3 rounded-xl flex items-center gap-2 transition-all active:scale-95 font-black text-xs uppercase tracking-widest shadow-xl shadow-blue-500/10">
-                    <Plus size={20} /> New Customer
-                </button>
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div>
+                    <h1 className="text-3xl font-bold text-white tracking-tighter uppercase italic">Customers</h1>
+                    <p className="text-neutral-500 font-bold uppercase tracking-widest text-xs mt-1">Manage and track your active client base</p>
+                </div>
+                <div className="flex flex-col md:flex-row gap-4 w-full md:w-auto">
+                    <SearchBar
+                        value={searchTerm}
+                        onChange={setSearchTerm}
+                        placeholder="Search name, phone, email..."
+                        className="w-full md:w-64"
+                    />
+                    <button onClick={() => setShowModal(true)} className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-3 rounded-xl flex items-center gap-2 transition-all active:scale-95 font-black text-xs uppercase tracking-widest shadow-xl shadow-blue-500/10">
+                        <Plus size={20} /> New Customer
+                    </button>
+                </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {customers.map(c => (
-                    <div key={c.id} className="bg-neutral-900/50 backdrop-blur-sm border border-neutral-800 p-6 rounded-[2rem] hover:border-amber-500/30 transition-all group">
-                        <div className="flex justify-between items-start mb-4">
-                            <div>
-                                <h3 className="text-xl font-black text-white tracking-tight uppercase italic">{c.name}</h3>
-                                <div className="h-1 w-12 bg-amber-500 mt-2 rounded-full"></div>
-                            </div>
-                            <div className="flex items-center gap-3">
-                                <Link to={`/dashboard/customers/${c.id}/history`} className="text-neutral-600 hover:text-amber-500 transition-colors" title="View Ledger & History">
-                                    <FileText size={16} />
-                                </Link>
-                                <button onClick={() => promptDelete(c)} className="text-neutral-600 hover:text-red-500 transition-colors">
-                                    <Trash2 size={16} />
-                                </button>
-                            </div>
-                        </div>
-
-                        <div className="space-y-3">
-                            <div className="flex items-center gap-3 bg-neutral-950 p-3 rounded-xl border border-neutral-800/50">
-                                <div className="p-2 bg-neutral-900 rounded-lg text-amber-500">
-                                    <Mail size={16} />
-                                </div>
-                                <div className="flex flex-col">
-                                    <span className="text-[10px] font-black text-neutral-500 uppercase tracking-widest">Email Address</span>
-                                    <span className="text-sm font-bold text-white max-w-[200px] truncate">{c.email || 'N/A'}</span>
-                                </div>
-                            </div>
-
-                            <div className="flex items-center gap-3 bg-neutral-950 p-3 rounded-xl border border-neutral-800/50">
-                                <div className="p-2 bg-neutral-900 rounded-lg text-amber-500">
-                                    <Phone size={16} />
-                                </div>
-                                <div className="flex flex-col">
-                                    <span className="text-[10px] font-black text-neutral-500 uppercase tracking-widest">Phone Number</span>
-                                    <span className="text-sm font-bold text-white">{c.phone || 'N/A'}</span>
-                                </div>
-                            </div>
-
-                            {c.address && (
-                                <div className="flex items-center gap-3 bg-neutral-950 p-3 rounded-xl border border-neutral-800/50">
-                                    <div className="p-2 bg-neutral-900 rounded-lg text-amber-500">
-                                        <MapPin size={16} />
+            <div className="space-y-4">
+                {loading ? (
+                    <CardSkeleton count={6} />
+                ) : filteredCustomers.length === 0 ? (
+                    <EmptyState
+                        icon={Users}
+                        title="No Customers Found"
+                        message={searchTerm ? `No results match "${searchTerm}"` : "Time to register your first client."}
+                    />
+                ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {filteredCustomers.map(c => (
+                            <div key={c.id} className="bg-neutral-900/50 backdrop-blur-sm border border-neutral-800 p-6 rounded-[2rem] hover:border-amber-500/30 transition-all group">
+                                <div className="flex justify-between items-start mb-4">
+                                    <div>
+                                        <h3 className="text-xl font-black text-white tracking-tight uppercase italic">{c.name}</h3>
+                                        <div className="h-1 w-12 bg-amber-500 mt-2 rounded-full"></div>
                                     </div>
-                                    <div className="flex flex-col">
-                                        <span className="text-[10px] font-black text-neutral-500 uppercase tracking-widest">Location</span>
-                                        <span className="text-xs font-bold text-neutral-300 line-clamp-1">{c.address}</span>
+                                    <div className="flex items-center gap-3">
+                                        <Link to={`/dashboard/customers/${c.id}/history`} className="text-neutral-600 hover:text-amber-500 transition-colors" title="View Ledger & History">
+                                            <FileText size={16} />
+                                        </Link>
+                                        <button onClick={() => promptDelete(c)} className="text-neutral-600 hover:text-red-500 transition-colors">
+                                            <Trash2 size={16} />
+                                        </button>
                                     </div>
                                 </div>
-                            )}
-                        </div>
+
+                                <div className="space-y-3">
+                                    <div className="flex items-center gap-3 bg-neutral-950 p-3 rounded-xl border border-neutral-800/50">
+                                        <div className="p-2 bg-neutral-900 rounded-lg text-amber-500">
+                                            <Mail size={16} />
+                                        </div>
+                                        <div className="flex flex-col">
+                                            <span className="text-[10px] font-black text-neutral-500 uppercase tracking-widest">Email Address</span>
+                                            <span className="text-sm font-bold text-white max-w-[200px] truncate">{c.email || 'N/A'}</span>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-center gap-3 bg-neutral-950 p-3 rounded-xl border border-neutral-800/50">
+                                        <div className="p-2 bg-neutral-900 rounded-lg text-amber-500">
+                                            <Phone size={16} />
+                                        </div>
+                                        <div className="flex flex-col">
+                                            <span className="text-[10px] font-black text-neutral-500 uppercase tracking-widest">Phone Number</span>
+                                            <span className="text-sm font-bold text-white">{c.phone || 'N/A'}</span>
+                                        </div>
+                                    </div>
+
+                                    {c.address && (
+                                        <div className="flex items-center gap-3 bg-neutral-950 p-3 rounded-xl border border-neutral-800/50">
+                                            <div className="p-2 bg-neutral-900 rounded-lg text-amber-500">
+                                                <MapPin size={16} />
+                                            </div>
+                                            <div className="flex flex-col">
+                                                <span className="text-[10px] font-black text-neutral-500 uppercase tracking-widest">Location</span>
+                                                <span className="text-xs font-bold text-neutral-300 line-clamp-1">{c.address}</span>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
                     </div>
-                ))}
+                )}
             </div>
 
             {showModal && (

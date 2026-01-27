@@ -1,3 +1,4 @@
+import React, { useState, useEffect } from 'react';
 import { Calendar, CheckCircle, XCircle, Clock, AlertCircle, Trash2, Filter } from 'lucide-react';
 import { useNotification } from '../context/NotificationContext';
 import api from '../api/client';
@@ -128,6 +129,15 @@ const AppointmentManager = () => {
                                     className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold rounded-xl transition-colors"
                                 >
                                     Mark Completed
+                                </button>
+                            )}
+
+                            {appt.status === 'COMPLETED' && (
+                                <button
+                                    onClick={() => setConfirmAction({ show: true, id: appt.id, type: 'delete' })}
+                                    className="px-4 py-2 bg-red-600/10 hover:bg-red-600 text-red-500 hover:text-white border border-red-500/20 text-sm font-bold rounded-xl transition-all flex items-center gap-2"
+                                >
+                                    <Trash2 size={16} /> Remove Record
                                 </button>
                             )}
                         </div>
