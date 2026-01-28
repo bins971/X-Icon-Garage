@@ -12,7 +12,7 @@ router.post('/:jobOrderId', protect, upload.single('file'), async (req, res) => 
 
     const db = await getDb();
     const id = crypto.randomUUID();
-    const fileUrl = `/uploads/${req.file.filename}`;
+    const fileUrl = req.file.path;
 
     try {
         await db.run(

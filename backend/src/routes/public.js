@@ -37,7 +37,7 @@ router.post('/track', async (req, res) => {
         // Otherwise, Search Job Orders
         const job = await db.get(
             `SELECT 
-                j.id, j.jobNumber, j.status, j.priority, j.createdAt, j.updatedAt, 
+                j.id, j.jobNumber, j.status, j.priority, j.createdAt, j.updatedat as "updatedAt", 
                 v.make, v.model, v.year, v.color,
                 u.name as mechanicName
              FROM job_orders j
@@ -46,6 +46,7 @@ router.post('/track', async (req, res) => {
              WHERE j.jobNumber = ? AND v.plateNumber = ?`,
             [jobNumber, plateNumber]
         );
+        console.log('[TRACK DEBUG] Job Found:', job);
 
         if (!job) {
             return res.status(404).json({ message: 'Job Order not found. Low match score.' });
@@ -60,7 +61,7 @@ router.post('/track', async (req, res) => {
             priority: job.priority,
             vehicle: `${job.year} ${job.make} ${job.model} (${job.color})`,
             mechanic: job.mechanicName || 'Pending Assignment',
-            lastUpdated: job.updatedAt,
+            lastUpdated: job.updatedAt || job.createdAt,
             created: job.createdAt,
             isAppointment: false,
             invoiceId: invoice?.id,

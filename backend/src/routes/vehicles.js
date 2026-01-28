@@ -125,6 +125,14 @@ router.delete('/:id', protect, async (req, res) => {
             return res.status(403).json({ message: 'Not authorized' });
         }
 
+        // Check for associated job orders
+        const jobOrder = await db.get('SELECT id FROM job_orders WHERE vehicleid = ?', [req.params.id]);
+        if (jobOrder) {
+            return res.status(400).json({
+                message: 'Cannot delete vehicle because it has associated service history. Please contact support to archive it.'
+            });
+        }
+
         await db.run('DELETE FROM vehicles WHERE id = ?', [req.params.id]);
         res.json({ message: 'Vehicle removed from garage' });
     } catch (error) {

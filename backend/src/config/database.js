@@ -365,8 +365,26 @@ async function initializeDb() {
             // Migration: Add paymentMethod if missing
             try {
                 await client.query('ALTER TABLE online_orders ADD COLUMN IF NOT EXISTS paymentMethod TEXT DEFAULT \'CASH\'');
+                // Shipping columns migration
+                await client.query('ALTER TABLE online_orders ADD COLUMN IF NOT EXISTS delivery_method TEXT DEFAULT \'PICKUP\'');
+                await client.query('ALTER TABLE online_orders ADD COLUMN IF NOT EXISTS shipping_address TEXT');
+                await client.query('ALTER TABLE online_orders ADD COLUMN IF NOT EXISTS shipping_city TEXT');
+                await client.query('ALTER TABLE online_orders ADD COLUMN IF NOT EXISTS shipping_province TEXT');
+                await client.query('ALTER TABLE online_orders ADD COLUMN IF NOT EXISTS shipping_postal TEXT');
+                await client.query('ALTER TABLE online_orders ADD COLUMN IF NOT EXISTS shipping_fee NUMERIC DEFAULT 0');
+                await client.query('ALTER TABLE online_orders ADD COLUMN IF NOT EXISTS courier_name TEXT');
+                await client.query('ALTER TABLE online_orders ADD COLUMN IF NOT EXISTS tracking_number TEXT');
+                console.log('[DB] Migration: Shipping columns checked/added to online_orders.');
+
+                // Migration: Update online_orders status check constraint
+                await client.query(`
+                    ALTER TABLE online_orders DROP CONSTRAINT IF EXISTS online_orders_status_check;
+                    ALTER TABLE online_orders ADD CONSTRAINT online_orders_status_check 
+                    CHECK (status IN ('NEW', 'PENDING', 'PENDING_PAYMENT', 'PAID', 'PROCESSING', 'PROCESSED', 'SHIPPED', 'DELIVERED', 'COMPLETED', 'CANCELLED'));
+                `);
+                console.log('[DB] Migration: online_orders_status_check updated.');
             } catch (err) {
-                console.log('Note: online_orders.paymentMethod already exists or migration handled');
+                console.log('Note: online_orders columns migration handled', err.message);
             }
 
             await client.query(`

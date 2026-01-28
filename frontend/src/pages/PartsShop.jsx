@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ShoppingBag, X, Clock, CreditCard, Wallet, ShieldCheck, Lock, ChevronRight, Package } from 'lucide-react';
 import { useNotification } from '../context/NotificationContext';
 import api from '../api/client';
@@ -20,7 +20,9 @@ const PartsShop = () => {
         }
     };
 
-    useState(() => { fetchParts(); }, []);
+    useEffect(() => {
+        fetchParts();
+    }, []);
 
     const addToCart = (part) => {
         const exists = cart.find(i => i.id === part.id);
@@ -67,7 +69,7 @@ const PartsShop = () => {
                         <p className="text-neutral-500 text-xs font-bold uppercase tracking-widest mt-1 mb-6">{part.partNumber}</p>
 
                         <div className="flex justify-between items-center">
-                            <span className="text-2xl font-black text-emerald-500 italic px-1">₱{part.sellingPrice.toLocaleString()}</span>
+                            <span className="text-2xl font-black text-emerald-500 italic px-1">₱{(part.sellingPrice || 0).toLocaleString()}</span>
                             <button
                                 onClick={() => addToCart(part)}
                                 disabled={part.quantity <= 0}
@@ -161,14 +163,37 @@ const CheckoutForm = ({ cart, total, onClear, onCancel }) => {
         paymentMethod: 'CASH',
         cardNumber: '', expiry: '', cvv: '', gcashNumber: ''
     });
-    const [status, setStatus] = useState('IDLE');
+    const [status, setStatus] = useState('IDLE'); // IDLE, LOADING, SUCCESS
+    const [orderReference, setOrderReference] = useState(null); // To store order details after success
+
+    // Shipping State
+    const [deliveryMethod, setDeliveryMethod] = useState('PICKUP'); // PICKUP or DELIVERY
+    const [shippingAddress, setShippingAddress] = useState({
+        address: '',
+        city: '',
+        province: '',
+        postal: ''
+    });
+
+    const SHIPPING_FEE = 150;
+    const FREE_SHIPPING_THRESHOLD = 5000;
+
+    // Computed Values
+    const subtotal = cart.reduce((sum, i) => sum + (i.sellingPrice * i.qty), 0);
+    const shippingFee = (deliveryMethod === 'DELIVERY' && subtotal < FREE_SHIPPING_THRESHOLD) ? SHIPPING_FEE : 0;
+    const totalAmount = subtotal + shippingFee;
 
     const handleCheckout = async (e) => {
         e.preventDefault();
 
-        // 1. Explicit Validation
+        // Validation
         if (!formData.customerName || !formData.email || !formData.phone) {
-            notify.error('Please complete your contact details.');
+            notify.error('Please fill in all contact details');
+            return;
+        }
+
+        if (deliveryMethod === 'DELIVERY' && (!shippingAddress.address || !shippingAddress.city || !shippingAddress.province)) {
+            notify.error('Please fill in complete shipping address');
             return;
         }
 
@@ -176,8 +201,6 @@ const CheckoutForm = ({ cart, total, onClear, onCancel }) => {
             notify.error('Please enter your GCash number.');
             return;
         }
-
-        // Note: We removed CC inputs, so no need to validate them for the "Simulation".
 
         setStatus('LOADING');
 
@@ -190,15 +213,29 @@ const CheckoutForm = ({ cart, total, onClear, onCancel }) => {
             await api.post('/shop/public/order', {
                 ...formData,
                 items: cart.map(i => ({ id: i.id, name: i.name, qty: i.qty, price: i.sellingPrice })),
-                totalAmount: total,
+                totalAmount: totalAmount,
                 paymentMethod: formData.paymentMethod,
+                deliveryMethod,
+                shippingAddress: deliveryMethod === 'DELIVERY' ? shippingAddress.address : undefined,
+                shippingCity: deliveryMethod === 'DELIVERY' ? shippingAddress.city : undefined,
+                shippingProvince: deliveryMethod === 'DELIVERY' ? shippingAddress.province : undefined,
+                shippingPostal: deliveryMethod === 'DELIVERY' ? shippingAddress.postal : undefined,
                 cardNumber: formData.paymentMethod === 'CARD' ? formData.cardNumber : undefined,
                 gcashNumber: formData.paymentMethod === 'GCASH' ? formData.gcashNumber : undefined
             });
 
-            notify.success(`Success! Order #${Math.floor(Math.random() * 9000) + 1000} Confirmed.`);
-            onClear();
-            onCancel();
+            // Set order reference details for success view
+            setOrderReference({
+                id: 'ORD-' + Math.random().toString(36).substr(2, 9).toUpperCase(),
+                amount: totalAmount,
+                paymentMethod: formData.paymentMethod
+            });
+
+            setStatus('SUCCESS');
+            onClear(); // Clear cart
+            setFormData({ customerName: '', email: '', phone: '', paymentMethod: 'CASH', cardNumber: '', gcashNumber: '' });
+            setDeliveryMethod('PICKUP'); // Reset delivery method
+            setShippingAddress({ address: '', city: '', province: '', postal: '' }); // Reset shipping address
         } catch (error) {
             notify.error('Transaction failed. Server not responding.');
             setStatus('IDLE');
@@ -242,27 +279,105 @@ const CheckoutForm = ({ cart, total, onClear, onCancel }) => {
                 </div>
             </div>
 
+
+
+            {/* Delivery Method */}
+            <div className="space-y-4">
+                <div className="flex items-center gap-2 mb-2">
+                    <div className="w-1 h-4 bg-amber-500 rounded-full"></div>
+                    <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest">Delivery Options</label>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                    {[
+                        { id: 'PICKUP', icon: <Package size={18} />, label: 'Store Pickup' },
+                        { id: 'DELIVERY', icon: <Package size={18} />, label: 'Delivery' }
+                    ].map(method => (
+                        <button
+                            key={method.id}
+                            type="button"
+                            onClick={() => setDeliveryMethod(method.id)}
+                            disabled={
+                                (method.id === 'DELIVERY' && formData.paymentMethod === 'CASH') ||
+                                (method.id === 'PICKUP' && formData.paymentMethod === 'COD')
+                            }
+                            className={`flex flex-col items-center justify-center gap-2 py-4 rounded-2xl transition-all duration-300 border-2 relative overflow-hidden group 
+                                ${((method.id === 'DELIVERY' && formData.paymentMethod === 'CASH') || (method.id === 'PICKUP' && formData.paymentMethod === 'COD'))
+                                    ? 'opacity-50 cursor-not-allowed bg-neutral-900 border-neutral-800'
+                                    : ''
+                                }
+                                ${deliveryMethod === method.id && !((method.id === 'DELIVERY' && formData.paymentMethod === 'CASH') || (method.id === 'PICKUP' && formData.paymentMethod === 'COD'))
+                                    ? 'bg-white text-black border-white shadow-lg scale-[1.02]'
+                                    : 'bg-neutral-950/50 text-neutral-500 border-neutral-800 hover:border-neutral-700 hover:bg-neutral-900'
+                                }`}
+                        >
+                            <span className="text-[10px] font-black uppercase tracking-widest">{method.label}</span>
+                            {method.id === 'DELIVERY' && subtotal < FREE_SHIPPING_THRESHOLD && (
+                                <span className="text-[10px] font-bold text-amber-500">+₱{SHIPPING_FEE}</span>
+                            )}
+                            {method.id === 'DELIVERY' && subtotal >= FREE_SHIPPING_THRESHOLD && (
+                                <span className="text-[10px] font-bold text-emerald-500">FREE</span>
+                            )}
+                        </button>
+                    ))}
+                </div>
+
+                {deliveryMethod === 'DELIVERY' && (
+                    <div className="space-y-3 animate-in fade-in slide-in-from-top-2">
+                        <input type="text" placeholder="Street Address / URL" className="w-full bg-neutral-900 border border-neutral-700 rounded-xl px-5 py-4 text-white text-sm focus:border-amber-500 focus:bg-neutral-800 focus:ring-1 focus:ring-amber-500/50 outline-none transition-all placeholder:text-neutral-500 font-medium"
+                            value={shippingAddress.address} onChange={e => setShippingAddress({ ...shippingAddress, address: e.target.value })} />
+                        <div className="grid grid-cols-2 gap-3">
+                            <input type="text" placeholder="City" className="w-full bg-neutral-900 border border-neutral-700 rounded-xl px-5 py-4 text-white text-sm focus:border-amber-500 focus:bg-neutral-800 focus:ring-1 focus:ring-amber-500/50 outline-none transition-all placeholder:text-neutral-500 font-medium"
+                                value={shippingAddress.city} onChange={e => setShippingAddress({ ...shippingAddress, city: e.target.value })} />
+                            <input type="text" placeholder="Province" className="w-full bg-neutral-900 border border-neutral-700 rounded-xl px-5 py-4 text-white text-sm focus:border-amber-500 focus:bg-neutral-800 focus:ring-1 focus:ring-amber-500/50 outline-none transition-all placeholder:text-neutral-500 font-medium"
+                                value={shippingAddress.province} onChange={e => setShippingAddress({ ...shippingAddress, province: e.target.value })} />
+                        </div>
+                        <input type="text" placeholder="Postal Code" className="w-full bg-neutral-900 border border-neutral-700 rounded-xl px-5 py-4 text-white text-sm focus:border-amber-500 focus:bg-neutral-800 focus:ring-1 focus:ring-amber-500/50 outline-none transition-all placeholder:text-neutral-500 font-medium"
+                            value={shippingAddress.postal} onChange={e => setShippingAddress({ ...shippingAddress, postal: e.target.value })} />
+                    </div>
+                )}
+            </div>
+
             {/* Payment Method */}
             <div className="space-y-4">
                 <div className="flex items-center gap-2 mb-2">
                     <div className="w-1 h-4 bg-amber-500 rounded-full"></div>
                     <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest">Payment Method</label>
                 </div>
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-2 gap-3">
                     {[
-                        { id: 'CASH', icon: <Wallet size={18} />, label: 'Cash' },
-                        { id: 'CARD', icon: <CreditCard size={18} />, label: 'Card' },
-                        { id: 'GCASH', icon: <span className="font-black text-xs">GC</span>, label: 'GCash' }
+                        { id: 'BANK_TRANSFER', icon: <CreditCard size={18} />, label: 'Bank Transfer', badge: 'Manual' },
+                        { id: 'GCASH_MANUAL', icon: <span className="font-black text-xs">GC</span>, label: 'GCash', badge: 'Manual' },
+                        { id: 'CARD', icon: <CreditCard size={18} />, label: 'Card', badge: 'Offline', disabled: true },
+                        { id: 'COD', icon: <Wallet size={18} />, label: 'COD', badge: 'Delivery' },
+                        { id: 'CASH', icon: <Wallet size={18} />, label: 'Cash', badge: 'Pickup' }
                     ].map(method => (
                         <button
                             key={method.id}
                             type="button"
-                            onClick={() => setFormData({ ...formData, paymentMethod: method.id })}
-                            className={`flex flex-col items-center justify-center gap-2 py-4 rounded-2xl transition-all duration-300 border-2 relative overflow-hidden group ${formData.paymentMethod === method.id
-                                ? 'bg-white text-black border-white shadow-lg scale-[1.02]'
-                                : 'bg-neutral-950/50 text-neutral-500 border-neutral-800 hover:border-neutral-700 hover:bg-neutral-900'
+                            onClick={() => {
+                                if (method.disabled) return;
+                                setFormData({ ...formData, paymentMethod: method.id });
+                                if (method.id === 'CASH') setDeliveryMethod('PICKUP');
+                                if (method.id === 'COD') setDeliveryMethod('DELIVERY');
+                            }}
+                            disabled={
+                                method.disabled ||
+                                (method.id === 'DELIVERY' && formData.paymentMethod === 'CASH') ||
+                                (method.id === 'PICKUP' && formData.paymentMethod === 'COD')
+                            }
+                            className={`flex flex-col items-center justify-center gap-2 py-4 rounded-2xl transition-all duration-300 border-2 relative overflow-hidden group 
+                                ${method.disabled ? 'opacity-40 cursor-not-allowed bg-neutral-900 border-neutral-800' :
+                                    formData.paymentMethod === method.id
+                                        ? 'bg-white text-black border-white shadow-lg scale-[1.02]'
+                                        : 'bg-neutral-950/50 text-neutral-500 border-neutral-800 hover:border-neutral-700 hover:bg-neutral-900'
                                 }`}
                         >
+                            {method.badge && (
+                                <span className={`absolute top-1 right-1 text-[8px] font-black px-2 py-0.5 rounded-full ${formData.paymentMethod === method.id ? 'bg-black text-white' : 'bg-neutral-800 text-neutral-500'
+                                    }`}>
+                                    {method.badge}
+                                </span>
+                            )}
                             <div className={`transition-transform duration-300 ${formData.paymentMethod === method.id ? 'scale-110' : 'group-hover:scale-110'}`}>
                                 {method.icon}
                             </div>
@@ -274,6 +389,71 @@ const CheckoutForm = ({ cart, total, onClear, onCancel }) => {
 
             {/* Dynamic Payment Content */}
             <div className="min-h-[80px] transition-all duration-300">
+                {formData.paymentMethod === 'BANK_TRANSFER' && (
+                    <div className="bg-blue-500/10 border border-blue-500/30 rounded-2xl p-5 animate-in fade-in zoom-in-95 space-y-4">
+                        <div className="flex items-center gap-2 mb-3">
+                            <CreditCard size={20} className="text-blue-500" />
+                            <h4 className="text-sm font-black text-blue-500 uppercase tracking-widest">Bank Transfer Options</h4>
+                        </div>
+
+                        {/* BDO */}
+                        <div className="bg-black/30 rounded-xl p-4 space-y-2 border-l-4 border-blue-400">
+                            <div className="text-xs font-black text-blue-400 uppercase tracking-wider mb-2">BDO</div>
+                            <div className="flex justify-between">
+                                <span className="text-xs text-neutral-400">Account Name:</span>
+                                <span className="text-sm font-bold text-white">X-ICON GARAGE</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span className="text-xs text-neutral-400">Account Number:</span>
+                                <span className="text-lg font-black text-blue-400 font-mono">1234567890</span>
+                            </div>
+                        </div>
+
+                        {/* BPI */}
+                        <div className="bg-black/30 rounded-xl p-4 space-y-2 border-l-4 border-red-400">
+                            <div className="text-xs font-black text-red-400 uppercase tracking-wider mb-2">BPI</div>
+                            <div className="flex justify-between">
+                                <span className="text-xs text-neutral-400">Account Name:</span>
+                                <span className="text-sm font-bold text-white">X-ICON GARAGE</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span className="text-xs text-neutral-400">Account Number:</span>
+                                <span className="text-lg font-black text-red-400 font-mono">0987654321</span>
+                            </div>
+                        </div>
+
+                        <div className="bg-amber-500/10 border-l-4 border-amber-500 p-3 rounded">
+                            <p className="text-xs text-amber-200 font-medium">
+                                💳 Choose any bank above. Use your Order ID as reference when transferring.
+                            </p>
+                        </div>
+                    </div>
+                )}
+
+                {formData.paymentMethod === 'GCASH_MANUAL' && (
+                    <div className="bg-[#007DF2]/10 border border-[#007DF2]/30 rounded-2xl p-5 animate-in fade-in zoom-in-95 space-y-4">
+                        <div className="flex items-center gap-2 mb-3">
+                            <span className="text-[#007DF2] font-black text-lg">GC</span>
+                            <h4 className="text-sm font-black text-[#007DF2] uppercase tracking-widest">GCash Payment Details</h4>
+                        </div>
+                        <div className="bg-black/30 rounded-xl p-4 space-y-2">
+                            <div className="flex justify-between">
+                                <span className="text-xs text-neutral-400 uppercase tracking-wider">GCash Number:</span>
+                                <span className="text-lg font-black text-[#007DF2] font-mono">09171234567</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span className="text-xs text-neutral-400 uppercase tracking-wider">Account Name:</span>
+                                <span className="text-sm font-bold text-white">X-ICON GARAGE</span>
+                            </div>
+                        </div>
+                        <div className="bg-[#007DF2]/10 border-l-4 border-[#007DF2] p-3 rounded">
+                            <p className="text-xs text-blue-200 font-medium">
+                                📸 Send payment via GCash and screenshot the receipt. You'll receive instructions to upload proof of payment.
+                            </p>
+                        </div>
+                    </div>
+                )}
+
                 {formData.paymentMethod === 'CARD' && (
                     <div className="bg-neutral-950/50 border border-neutral-800 rounded-2xl p-5 animate-in fade-in zoom-in-95 space-y-4 relative overflow-hidden">
                         <div className="absolute top-0 right-0 p-4 opacity-10">
@@ -336,6 +516,18 @@ const CheckoutForm = ({ cart, total, onClear, onCancel }) => {
                         <div className="text-left">
                             <p className="text-emerald-500 text-xs font-black uppercase tracking-wider">Pay at Counter</p>
                             <p className="text-emerald-500/60 text-[10px] font-bold">Upon order pickup</p>
+                        </div>
+                    </div>
+                )}
+
+                {formData.paymentMethod === 'COD' && (
+                    <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-6 text-center animate-in fade-in zoom-in-95 flex items-center justify-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-amber-500/20 flex items-center justify-center text-amber-500">
+                            <Package size={20} />
+                        </div>
+                        <div className="text-left">
+                            <p className="text-amber-500 text-xs font-black uppercase tracking-wider">Cash on Delivery</p>
+                            <p className="text-amber-500/60 text-[10px] font-bold">Pay when you receive your order</p>
                         </div>
                     </div>
                 )}

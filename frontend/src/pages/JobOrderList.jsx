@@ -141,11 +141,18 @@ const JobOrderList = () => {
 
     const handleStatusUpdate = async (jobId, newStatus) => {
         setStatusUpdating(jobId);
+        // Optimistic Update
+        const previousJobs = [...jobs];
+        setJobs(jobs.map(job =>
+            job.id === jobId ? { ...job, status: newStatus } : job
+        ));
+
         try {
             await api.patch(`/job-orders/${jobId}/status`, { status: newStatus });
             notify.success('Status updated successfully');
-            fetchJobs();
         } catch (error) {
+            // Revert on failure
+            setJobs(previousJobs);
             notify.error('Failed to update status');
         } finally {
             setStatusUpdating(null);

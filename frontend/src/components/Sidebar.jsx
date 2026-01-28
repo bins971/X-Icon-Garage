@@ -32,7 +32,7 @@ const Sidebar = ({ isOpen, onClose }) => {
         { name: 'VEHICLES', icon: <Car size={18} />, path: '/dashboard/vehicles', roles: ['ADMIN', 'ADVISOR', 'MECHANIC'] },
         { name: 'JOB ORDERS', icon: <Wrench size={18} />, path: '/dashboard/job-orders', roles: ['ADMIN', 'ADVISOR', 'MECHANIC'] },
         { name: 'APPOINTMENTS', icon: <CalendarCheck size={18} />, path: '/dashboard/appointments', roles: ['ADMIN', 'ADVISOR'] },
-        { name: 'WEB ORDERS', icon: <ShoppingCart size={18} />, path: '/dashboard/orders', roles: ['ADMIN', 'ADVISOR', 'ACCOUNTANT'] },
+        { name: 'ONLINE ORDERS', icon: <ShoppingCart size={18} />, path: '/dashboard/pending-payments', roles: ['ADMIN', 'ADVISOR', 'ACCOUNTANT'] },
         { name: 'INVENTORY', icon: <Package size={18} />, path: '/dashboard/inventory', roles: ['ADMIN', 'ADVISOR', 'ACCOUNTANT'] },
         { name: 'INVOICES', icon: <FileText size={18} />, path: '/dashboard/invoices', roles: ['ADMIN', 'ADVISOR', 'ACCOUNTANT'] },
         { name: 'SECURITY', icon: <ShieldAlert size={18} />, path: '/dashboard/security', roles: ['ADMIN'] },

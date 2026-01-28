@@ -29,6 +29,7 @@ const MyGarage = () => {
     const [vehicles, setVehicles] = useState([]);
     const [jobs, setJobs] = useState([]);
     const [invoices, setInvoices] = useState([]);
+    const [onlineOrders, setOnlineOrders] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
     const [manageModal, setManageModal] = useState(false);
@@ -41,14 +42,16 @@ const MyGarage = () => {
     const fetchGarageData = async () => {
         if (!user || user.role !== 'CUSTOMER') return;
         try {
-            const [vRes, jRes, iRes] = await Promise.all([
+            const [vRes, jRes, iRes, oRes] = await Promise.all([
                 api.get('/vehicles'),
                 api.get('/job-orders'),
-                api.get('/invoices')
+                api.get('/invoices'),
+                api.get('/shop/my-orders')
             ]);
             setVehicles(vRes.data);
             setJobs(jRes.data);
             setInvoices(iRes.data);
+            setOnlineOrders(oRes.data);
         } catch (error) {
             console.error('Error fetching garage data:', error);
         } finally {
@@ -369,8 +372,55 @@ const MyGarage = () => {
                         </div>
                     </div>
 
-                    {/* Quick Actions Sidebar */}
+                    {/* Quick Actions & Shop History */}
                     <div className="space-y-8">
+                        {/* ONLINE ORDERS SECTION */}
+                        <div className="bg-neutral-900 border border-neutral-800 p-8 rounded-[2.5rem] space-y-6">
+                            <h3 className="text-xs font-black text-white uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
+                                <Package size={16} className="text-amber-500" /> My Orders
+                            </h3>
+
+                            {onlineOrders.length > 0 ? (
+                                <div className="space-y-4">
+                                    {onlineOrders.map(order => (
+                                        <div key={order.id} className="bg-neutral-950 p-4 rounded-2xl border border-neutral-800 space-y-3">
+                                            <div className="flex justify-between items-start">
+                                                <div>
+                                                    <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full border ${order.status === 'SHIPPED' || order.status === 'COMPLETED' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' :
+                                                        order.status === 'CANCELLED' ? 'bg-red-500/10 text-red-500 border-red-500/20' :
+                                                            'bg-amber-500/10 text-amber-500 border-amber-500/20'
+                                                        }`}>
+                                                        {order.status.replace('_', ' ')}
+                                                    </span>
+                                                    <p className="text-xs text-neutral-500 font-mono mt-2">#{order.id.slice(0, 8)}</p>
+                                                </div>
+                                                <p className="text-white font-black text-sm">₱{order.totalAmount.toLocaleString()}</p>
+                                            </div>
+
+                                            {/* Items Summary */}
+                                            <div className="text-xs text-neutral-400">
+                                                {order.items.map((i, idx) => (
+                                                    <div key={idx}>{i.qty}x {i.name}</div>
+                                                ))}
+                                            </div>
+
+                                            {/* Tracking Info if Shipped */}
+                                            {(order.status === 'SHIPPED' || order.status === 'COMPLETED') && order.tracking_number && (
+                                                <div className="bg-neutral-900 p-3 rounded-xl border border-neutral-800">
+                                                    <p className="text-[10px] font-black text-amber-500 uppercase tracking-widest mb-1 flex items-center gap-1">
+                                                        <Truck size={10} /> Shipped via {order.courier_name}
+                                                    </p>
+                                                    <p className="text-xs text-white font-mono select-all">{order.tracking_number}</p>
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <p className="text-neutral-500 text-xs text-center py-4">No recent orders</p>
+                            )}
+                        </div>
+
                         <div className="bg-gradient-to-br from-amber-500 to-amber-600 p-10 rounded-[2.5rem] shadow-2xl relative overflow-hidden group">
                             <div className="absolute top-[-10%] right-[-10%] w-[50%] h-[50%] bg-white/20 blur-[40px] rounded-full"></div>
                             <h2 className="text-3xl font-black text-black tracking-tighter italic uppercase leading-tight relative z-10 mb-2">QUICK BOOKING</h2>
@@ -403,8 +453,8 @@ const MyGarage = () => {
                         </div>
                     </div>
                 </div>
-            </main>
-        </div>
+            </main >
+        </div >
     );
 };
 

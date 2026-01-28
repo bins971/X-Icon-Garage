@@ -54,7 +54,7 @@ const PublicNavbar = () => {
                     ))}
                 </div>
 
-                {/* Right Actions */}
+                {/* Auth */}
                 <div className="hidden md:flex items-center gap-6">
                     {user?.role === 'CUSTOMER' ? (
                         <div className="flex items-center gap-4">
@@ -115,19 +115,73 @@ const PublicNavbar = () => {
 
             {/* Mobile Menu */}
             {isMobileMenuOpen && (
-                <div className="md:hidden bg-neutral-900 border-b border-neutral-800 p-4 absolute w-full left-0 animate-in slide-in-from-top-5">
+                <div className="md:hidden bg-neutral-900 border-b border-neutral-800 p-4 absolute w-full left-0 animate-in slide-in-from-top-5 shadow-2xl">
                     <div className="flex flex-col gap-4">
                         {navLinks.map(link => (
                             <Link
                                 key={link.path}
                                 to={link.path}
                                 onClick={() => setIsMobileMenuOpen(false)}
-                                className={`text-base font-medium py-2 ${isActive(link.path) ? 'text-amber-400' : 'text-neutral-400'
+                                className={`text-sm font-black uppercase tracking-widest py-3 border-b border-neutral-800 ${isActive(link.path) ? 'text-amber-500' : 'text-neutral-400'
                                     }`}
                             >
                                 {link.name}
                             </Link>
                         ))}
+
+                        {/* Mobile Auth Buttons */}
+                        <div className="pt-2 flex flex-col gap-3">
+                            {user?.role === 'CUSTOMER' ? (
+                                <>
+                                    <Link
+                                        to="/my-garage"
+                                        onClick={() => setIsMobileMenuOpen(false)}
+                                        className={`text-center py-3 rounded-xl font-black uppercase tracking-widest text-xs border border-neutral-700 ${isActive('/my-garage') ? 'bg-neutral-800 text-amber-500' : 'text-white'}`}
+                                    >
+                                        My Garage
+                                    </Link>
+                                    <button
+                                        onClick={() => { handleLogout(); setIsMobileMenuOpen(false); }}
+                                        className="w-full bg-neutral-800 text-white py-3 rounded-xl text-xs font-black uppercase tracking-widest"
+                                    >
+                                        Sign Out
+                                    </button>
+                                </>
+                            ) : user ? (
+                                <>
+                                    <Link
+                                        to="/dashboard"
+                                        onClick={() => setIsMobileMenuOpen(false)}
+                                        className="text-center py-3 rounded-xl font-black uppercase tracking-widest text-xs bg-neutral-800 text-amber-500"
+                                    >
+                                        Staff Panel
+                                    </Link>
+                                    <button
+                                        onClick={() => { handleLogout(); setIsMobileMenuOpen(false); }}
+                                        className="w-full bg-neutral-800 text-white py-3 rounded-xl text-xs font-black uppercase tracking-widest"
+                                    >
+                                        Sign Out
+                                    </button>
+                                </>
+                            ) : (
+                                <>
+                                    <Link
+                                        to="/customer-login"
+                                        onClick={() => setIsMobileMenuOpen(false)}
+                                        className="text-center w-full py-3 rounded-xl font-black uppercase tracking-widest text-xs border border-neutral-700 text-neutral-300"
+                                    >
+                                        Log In
+                                    </Link>
+                                    <Link
+                                        to="/register"
+                                        onClick={() => setIsMobileMenuOpen(false)}
+                                        className="text-center w-full bg-amber-500 text-black py-3 rounded-xl font-black uppercase tracking-widest text-xs"
+                                    >
+                                        Join Portal
+                                    </Link>
+                                </>
+                            )}
+                        </div>
                     </div>
                 </div>
             )}

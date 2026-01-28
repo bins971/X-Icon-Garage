@@ -35,10 +35,18 @@ const TrackJob = () => {
     };
 
     const getStatusStep = (status) => {
-        const steps = ['RECEIVED', 'IN_PROGRESS', 'QUALITY_CHECK', 'COMPLETED', 'RELEASED'];
-        let currentIndex = steps.indexOf(status);
-        if (currentIndex === -1) currentIndex = 0; // Default or cancelled
-        return currentIndex;
+        // ['Received', 'In Progress', 'Checks', 'Ready']
+        // Align backend statuses with these 4 steps
+        switch (status) {
+            case 'RECEIVED': return 0;
+            case 'DIAGNOSING':
+            case 'IN_PROGRESS':
+            case 'WAITING_FOR_PARTS': return 1;
+            case 'QUALITY_CHECK': return 2; // Placeholder for future use
+            case 'COMPLETED': return 3; // Ready for pickup
+            case 'RELEASED': return 3; // Completed/Released
+            default: return 0;
+        }
     };
 
     return (
@@ -114,13 +122,14 @@ const TrackJob = () => {
                             </div>
                         </div>
 
-                        <div className="relative flex justify-between items-center mb-8 px-2">
+                        <div className="relative flex justify-between items-start mb-8 px-2">
                             {/* Progress Line */}
-                            <div className="absolute left-0 top-1/2 -translate-y-1/2 w-full h-1 bg-neutral-800 -z-0"></div>
+                            <div className="absolute left-4 top-4 -translate-y-1/2 w-[calc(100%-2rem)] h-1 bg-neutral-800 -z-0"></div>
                             <div
-                                className="absolute left-0 top-1/2 -translate-y-1/2 h-1 bg-amber-600 transition-all duration-1000 -z-0"
-                                style={{ width: `${(getStatusStep(result.status) / 4) * 100}%` }}
+                                className="absolute left-4 top-4 -translate-y-1/2 h-1 bg-amber-600 transition-all duration-1000 -z-0"
+                                style={{ width: `${(getStatusStep(result.status) / 3) * 100}%`, maxWidth: 'calc(100% - 2rem)' }}
                             ></div>
+
 
                             {['Received', 'In Progress', 'Checks', 'Ready'].map((step, idx) => {
                                 const current = getStatusStep(result.status);
@@ -140,23 +149,14 @@ const TrackJob = () => {
                             })}
                         </div>
 
-                        <div className="bg-neutral-950 rounded-xl p-4 flex items-center justify-between text-sm">
-                            <div className="flex items-center gap-3">
-                                <div className="p-2 bg-neutral-900 rounded-lg text-neutral-400">
-                                    <Wrench size={18} />
-                                </div>
-                                <div className="flex flex-col">
-                                    <span className="text-neutral-500 text-xs">Assigned Mechanic</span>
-                                    <span className="text-white font-medium">{result.mechanic}</span>
-                                </div>
-                            </div>
+                        <div className="bg-neutral-950 rounded-xl p-4 flex items-center justify-center text-sm">
                             <div className="flex items-center gap-3">
                                 <div className="p-2 bg-neutral-900 rounded-lg text-neutral-400">
                                     <Clock size={18} />
                                 </div>
                                 <div className="flex flex-col">
                                     <span className="text-neutral-500 text-xs">Last Update</span>
-                                    <span className="text-white font-medium">{result.lastUpdated ? new Date(result.lastUpdated).toLocaleDateString() : 'Pending Updates'}</span>
+                                    <span className="text-white font-medium">{result.lastUpdated ? new Date(result.lastUpdated).toLocaleDateString() + ' ' + new Date(result.lastUpdated).toLocaleTimeString() : 'Pending Updates'}</span>
                                 </div>
                             </div>
                         </div>
@@ -182,7 +182,7 @@ const TrackJob = () => {
                     &copy; 2026 X-ICON GARAGE. ELITE SERVICE TRACKING.
                 </p>
             </div>
-        </div>
+        </div >
     );
 };
 

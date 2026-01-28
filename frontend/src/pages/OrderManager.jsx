@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Package, Truck, CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
+import { Package, Truck, CheckCircle, XCircle, AlertTriangle, Trash2 } from 'lucide-react';
 import { useNotification } from '../context/NotificationContext';
 import api from '../api/client';
 import useSearch from '../hooks/useSearch';
@@ -44,15 +44,30 @@ const OrderManager = () => {
         });
     };
 
+    const requestDelete = (id) => {
+        setConfirmAction({
+            id,
+            type: 'DELETE',
+            title: 'Delete Order?',
+            message: 'Are you sure you want to permanently delete this order? This cannot be undone.',
+            color: 'red'
+        });
+    };
+
     const confirmUpdate = async () => {
         if (!confirmAction) return;
-        const { id, status } = confirmAction;
+        const { id, status, type } = confirmAction;
         try {
-            await api.patch(`/shop/orders/${id}`, { status });
-            notify.success(`Order marked as ${status.toLowerCase()}`);
+            if (type === 'DELETE') {
+                await api.delete(`/shop/orders/${id}`);
+                notify.success('Order removed successfully');
+            } else {
+                await api.patch(`/shop/orders/${id}`, { status });
+                notify.success(`Order marked as ${status.toLowerCase()}`);
+            }
             fetchOrders();
         } catch (error) {
-            notify.error('Failed to update order status');
+            notify.error('Action failed');
         } finally {
             setConfirmAction(null);
         }
@@ -136,6 +151,14 @@ const OrderManager = () => {
                                         <XCircle size={16} /> Cancel
                                     </button>
                                 )}
+
+                                <button
+                                    onClick={() => requestDelete(order.id)}
+                                    className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-red-500/10 hover:text-red-500 text-slate-400 rounded-xl text-sm font-medium transition-colors ml-2"
+                                    title="Remove Order"
+                                >
+                                    <Trash2 size={16} />
+                                </button>
                             </div>
                         </div>
                     ))
@@ -148,7 +171,7 @@ const OrderManager = () => {
                 title={confirmAction?.title}
                 message={confirmAction?.message}
                 type={confirmAction?.color === 'red' ? 'danger' : confirmAction?.color === 'emerald' ? 'info' : 'info'}
-                confirmLabel={confirmAction?.status === 'CANCELLED' ? 'Yes, Cancel Order' : 'Yes, Update'}
+                confirmLabel={confirmAction?.type === 'DELETE' ? 'Yes, Delete' : confirmAction?.status === 'CANCELLED' ? 'Yes, Cancel Order' : 'Yes, Update'}
             />
         </div >
     );

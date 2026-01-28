@@ -18,11 +18,19 @@ app.set('trust proxy', 1);
 
 
 // 1. CORS (Allow frontend)
+// 1. CORS (Allow frontend)
 app.use(cors({
-    origin: '*',
+    origin: (origin, callback) => {
+        // Allow all origins (for development) or specific frontend
+        callback(null, true);
+    },
+    credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization']
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin']
 }));
+
+// Handle Preflight
+// app.options('*', cors());
 
 // 2. Security Headers
 app.use(helmet({
@@ -52,7 +60,7 @@ const limiter = rateLimit({
 
 const authLimiter = rateLimit({
     windowMs: 60 * 60 * 1000,
-    max: 100,
+    max: 1000,
     message: { message: 'Too many login attempts, please try again after an hour.' }
 });
 
@@ -96,6 +104,7 @@ app.use('/api/job-orders', require('./routes/jobOrders'));
 app.use('/api/upload', require('./routes/upload'));
 app.use('/api/invoices', require('./routes/invoices'));
 app.use('/api/reports', require('./routes/reports'));
+app.use('/api/admin', require('./routes/admin'));
 
 // --- Frontend Serving ---
 const path = require('path');

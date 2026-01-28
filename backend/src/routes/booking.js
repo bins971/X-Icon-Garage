@@ -13,6 +13,14 @@ router.post('/public', async (req, res) => {
         return res.status(400).json({ message: 'Please provide all required fields.' });
     }
 
+    const bookingDate = new Date(date);
+    if (isNaN(bookingDate.getTime())) {
+        return res.status(400).json({ message: 'Invalid date format.' });
+    }
+    if (bookingDate < new Date()) {
+        return res.status(400).json({ message: 'Booking date cannot be in the past.' });
+    }
+
     try {
         const db = await getDb();
         const id = crypto.randomUUID();

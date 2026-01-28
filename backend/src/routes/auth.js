@@ -10,8 +10,14 @@ const QRCode = require('qrcode');
 
 // @route   POST /api/auth/register
 router.post('/register', async (req, res) => {
-    console.log('[Register] Request body:', req.body);
+    console.log('[Register] Registration attempt for:', req.body.username);
     const { username, password, name, phone, email } = req.body;
+
+    // Basic Validation
+    if (!username || username.length < 3) return res.status(400).json({ message: 'Username must be at least 3 characters' });
+    if (!password || password.length < 6) return res.status(400).json({ message: 'Password must be at least 6 characters' });
+    if (!name) return res.status(400).json({ message: 'Name is required' });
+
     const db = await getDb();
     let userId = null;
 
@@ -43,8 +49,8 @@ router.post('/register', async (req, res) => {
             console.log('[Register] Customer profile created');
         } catch (customerError) {
             console.error('Customer profile creation failed:', customerError.message);
-            // If it fails, we might want to fail the whole request or handle it gracefully
-            // For now, logging it, but the vehicles endpoint will try to fix it later if missing
+            // THROW error to trigger rollback in outer catch block
+            throw new Error('Failed to create customer profile');
         }
 
         const token = jwt.sign(
@@ -63,13 +69,15 @@ router.post('/register', async (req, res) => {
     } catch (error) {
         console.error('[Register] Error:', error);
         if (userId) {
+            // Rollback user creation
             try {
                 await db.run('DELETE FROM users WHERE id = ?', [userId]);
+                console.log('[Register] Rolled back user creation for:', userId);
             } catch (rollbackError) {
                 console.error('Rollback failed:', rollbackError.message);
             }
         }
-        res.status(500).json({ message: error.message });
+        res.status(500).json({ message: error.message || 'Registration failed' });
     }
 });
 

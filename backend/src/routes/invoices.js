@@ -189,17 +189,36 @@ router.post('/:id/payments', protect, async (req, res) => {
     const { amount, paymentMethod } = req.body;
     const db = await getDb();
     try {
+        const invoice = await db.get('SELECT * FROM invoices WHERE id = ?', [req.params.id]);
+        if (!invoice) return res.status(404).json({ message: 'Invoice not found' });
+
+        const currentPayments = await db.get('SELECT SUM(amount) as totalpaid FROM payments WHERE invoiceid = ?', [req.params.id]);
+        const totalPaidSoFar = parseFloat(currentPayments.totalpaid || 0);
+        const invoiceTotal = parseFloat(invoice.totalamount || 0);
+        const remaining = invoiceTotal - totalPaidSoFar;
+
+        if (amount <= 0) {
+            return res.status(400).json({ message: 'Payment amount must be greater than zero.' });
+        }
+
+        if (amount > remaining + 0.01) { // Floating point tolerance
+            return res.status(400).json({ message: `Overpayment detected. Remaining balance is ₱${remaining.toLocaleString()}` });
+        }
+
         const id = crypto.randomUUID();
         await db.run(
             'INSERT INTO payments (id, invoiceid, amount, paymentmethod) VALUES (?, ?, ?, ?)',
             [id, req.params.id, amount, paymentMethod]
         );
 
-        const invoice = await db.get('SELECT * FROM invoices WHERE id = ?', [req.params.id]);
+        // Re-fetch for status update (using the values we already have + new amount is safer, but db fetch ensures consistency)
         const payments = await db.get('SELECT SUM(amount) as totalpaid FROM payments WHERE invoiceid = ?', [req.params.id]);
 
+        const totalPaid = parseFloat(payments.totalpaid || 0);
+        const totalAmount = parseFloat(invoice.totalamount || 0);
+
         let status = 'PARTIAL';
-        if (parseFloat(payments.totalpaid) >= parseFloat(invoice.totalamount)) {
+        if (totalPaid >= totalAmount - 0.01) { // Floating point tolerance
             status = 'PAID';
         }
 
