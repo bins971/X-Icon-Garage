@@ -25,7 +25,7 @@ router.get('/public/parts', async (req, res) => {
                 createdat as "createdAt", 
                 updatedat as "updatedAt" 
             FROM parts 
-            WHERE ispublic = 1 AND quantity > 0
+            WHERE ispublic = 1 AND quantity > 0 AND (isArchived = 0 OR isArchived IS NULL)
         `);
         res.json(parts);
     } catch (error) {
@@ -106,7 +106,10 @@ router.post('/public/order', async (req, res) => {
                 throw new Error(`Insufficient stock for ${item.name}. Available: ${part.quantity}, Requested: ${item.qty}`);
             }
 
-            if (!part.isPublic) {
+            // Handle casing differences between DB drivers (Postgres returns lowercase keys for unquoted identifiers)
+            const isPublic = part.isPublic !== undefined ? part.isPublic : part.ispublic;
+
+            if (!isPublic) {
                 throw new Error(`Part ${item.name} is no longer available for sale.`);
             }
 

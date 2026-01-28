@@ -55,30 +55,39 @@ const PartsShop = () => {
                 </button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
                 {parts.map(part => (
-                    <div key={part.id} className="bg-neutral-900/50 backdrop-blur-xl border border-neutral-800 p-8 rounded-[2.5rem] hover:border-amber-500/30 transition-all duration-300 group">
-                        <div className="bg-neutral-950 rounded-3xl mb-6 aspect-square flex items-center justify-center border border-neutral-800 transition-transform group-hover:scale-105 overflow-hidden relative">
+                    <div key={part.id} className="bg-neutral-900/50 backdrop-blur-xl border border-neutral-800 p-4 rounded-3xl hover:border-amber-500/30 transition-all duration-300 group h-full flex flex-col">
+                        <div className="bg-neutral-950 rounded-2xl mb-3 aspect-square flex items-center justify-center border border-neutral-800 transition-transform group-hover:scale-105 overflow-hidden relative shrink-0">
                             {part.image ? (
                                 <img src={part.image} alt={part.name} className="w-full h-full object-cover" />
                             ) : (
-                                <ShoppingBag className="text-neutral-700" size={48} />
+                                <ShoppingBag className="text-neutral-700" size={32} />
                             )}
                         </div>
-                        <h3 className="text-lg font-black text-white uppercase tracking-tight">{part.name}</h3>
-                        <p className="text-neutral-500 text-xs font-bold uppercase tracking-widest mt-1 mb-6">{part.partNumber}</p>
+                        <div className="flex-1 min-h-[60px]">
+                            <h3 className="text-sm font-black text-white uppercase tracking-tight line-clamp-2 leading-tight" title={part.name}>{part.name}</h3>
+                            <p className="text-neutral-500 text-[10px] font-bold uppercase tracking-widest mt-1 mb-3">{part.partNumber}</p>
+                        </div>
 
-                        <div className="flex justify-between items-center">
-                            <span className="text-2xl font-black text-emerald-500 italic px-1">₱{(part.sellingPrice || 0).toLocaleString()}</span>
+                        <div className="flex justify-between items-center relative mt-auto pt-3 border-t border-dashed border-neutral-800">
+                            <div className="flex flex-col">
+                                <span className="text-lg font-black text-emerald-500 italic px-1">₱{(part.sellingPrice || 0).toLocaleString()}</span>
+                                {part.quantity === 1 && (
+                                    <span className="text-[9px] font-black text-amber-500 uppercase tracking-widest animate-pulse ml-1">
+                                        Only 1 Left!
+                                    </span>
+                                )}
+                            </div>
                             <button
                                 onClick={() => addToCart(part)}
                                 disabled={part.quantity <= 0}
-                                className={`text-[10px] font-black px-6 py-3 rounded-xl uppercase tracking-widest transition-colors ${part.quantity > 0
+                                className={`text-[10px] font-black px-3 py-2 rounded-lg uppercase tracking-widest transition-colors ${part.quantity > 0
                                     ? 'bg-white text-black hover:bg-amber-500'
-                                    : 'bg-neutral-800 text-neutral-600 cursor-not-allowed'
+                                    : 'bg-neutral-800 text-neutral-500 cursor-not-allowed border border-neutral-700'
                                     }`}
                             >
-                                {part.quantity > 0 ? 'Add to Build' : 'Out of Stock'}
+                                {part.quantity > 0 ? 'Add' : 'N/A'}
                             </button>
                         </div>
                     </div>
@@ -237,7 +246,8 @@ const CheckoutForm = ({ cart, total, onClear, onCancel }) => {
             setDeliveryMethod('PICKUP'); // Reset delivery method
             setShippingAddress({ address: '', city: '', province: '', postal: '' }); // Reset shipping address
         } catch (error) {
-            notify.error('Transaction failed. Server not responding.');
+            console.error(error);
+            notify.error(error.response?.data?.message || 'Transaction failed. Server not responding.');
             setStatus('IDLE');
         }
     };

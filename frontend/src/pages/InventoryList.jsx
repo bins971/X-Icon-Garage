@@ -38,7 +38,8 @@ const InventoryList = () => {
             setShowDeleteConfirm(false);
             fetchParts();
         } catch (error) {
-            notify.error('Failed to remove some items');
+            console.error(error);
+            notify.error(error.response?.data?.message || 'Failed to remove some items. They may be in use.');
         }
     };
 
@@ -112,6 +113,11 @@ const InventoryList = () => {
                                     {isSelected && <Check size={14} className="text-white" />}
                                 </div>
                             )}
+
+                            {/* Visibility Badge */}
+                            <div className={`absolute top-4 left-4 text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded-lg flex items-center gap-1 ${p.isPublic ? 'bg-blue-500/20 text-blue-400' : 'bg-slate-800 text-slate-500'}`}>
+                                {p.isPublic ? 'PUBLIC' : 'PRIVATE'}
+                            </div>
 
                             {p.quantity <= p.minThreshold && !deleteMode && (
                                 <div className="absolute top-0 right-0 bg-amber-500/20 text-amber-500 px-3 py-1 rounded-bl-xl text-xs font-bold flex items-center gap-1">
@@ -191,7 +197,7 @@ const DeleteConfirmationModal = ({ count, onCancel, onConfirm }) => {
 
 const PartModal = ({ onClose, onSuccess }) => {
     const notify = useNotification();
-    const [formData, setFormData] = useState({ name: '', partNumber: '', quantity: '', buyingPrice: '', sellingPrice: '', minThreshold: '' });
+    const [formData, setFormData] = useState({ name: '', partNumber: '', quantity: '', buyingPrice: '', sellingPrice: '', minThreshold: '', isPublic: true });
     const [image, setImage] = useState(null);
 
     const handleSubmit = async (e) => {
@@ -247,6 +253,13 @@ const PartModal = ({ onClose, onSuccess }) => {
                             value={formData.buyingPrice} onChange={e => setFormData({ ...formData, buyingPrice: e.target.value })} />
                         <input type="number" placeholder="Selling Price (₱)" required className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-white"
                             value={formData.sellingPrice} onChange={e => setFormData({ ...formData, sellingPrice: e.target.value })} />
+                    </div>
+
+                    <div className="flex items-center gap-3 bg-slate-950 border border-slate-800 p-3 rounded-xl cursor-pointer" onClick={() => setFormData({ ...formData, isPublic: !formData.isPublic })}>
+                        <div className={`w-10 h-6 rounded-full p-1 transition-colors ${formData.isPublic ? 'bg-blue-600' : 'bg-slate-700'}`}>
+                            <div className={`w-4 h-4 rounded-full bg-white transition-transform ${formData.isPublic ? 'translate-x-4' : 'translate-x-0'}`} />
+                        </div>
+                        <span className="text-white text-sm font-bold">Public Visibility (Show in Shop)</span>
                     </div>
 
                     <div className="flex gap-4">

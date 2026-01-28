@@ -196,6 +196,13 @@ async function initializeDb() {
                 console.log('Note: parts.image already exists or migration handled');
             }
 
+            // Migration: Add isArchived to parts
+            try {
+                await client.query('ALTER TABLE parts ADD COLUMN IF NOT EXISTS isArchived INTEGER DEFAULT 0');
+            } catch (err) {
+                console.log('Note: parts.isArchived already exists or migration handled');
+            }
+
             // Job Orders table
             await client.query(`
                 DO $$ BEGIN
@@ -385,6 +392,14 @@ async function initializeDb() {
                 console.log('[DB] Migration: online_orders_status_check updated.');
             } catch (err) {
                 console.log('Note: online_orders columns migration handled', err.message);
+            }
+
+            // Migration: Add isArchived to online_orders
+            try {
+                await client.query('ALTER TABLE online_orders ADD COLUMN IF NOT EXISTS isArchived INTEGER DEFAULT 0');
+                console.log('[DB] Migration: Added isArchived to online_orders.');
+            } catch (err) {
+                console.log('Note: online_orders isArchived migration handled', err.message);
             }
 
             await client.query(`

@@ -31,17 +31,28 @@ router.post('/:id/parts', protect, async (req, res) => {
         if (part.quantity < quantity) return res.status(400).json({ message: 'Insufficient stock' });
 
         const id = crypto.randomUUID();
-        await db.run(
-            'INSERT INTO job_order_parts (id, joborderid, partid, quantity, unitprice) VALUES (?, ?, ?, ?, ?)',
-            [id, req.params.id, partId, quantity, part.sellingPrice]
-        );
 
-        // Deduct from inventory
-        await db.run('UPDATE parts SET quantity = quantity - ? WHERE id = ?', [quantity, partId]);
+        // Start Transaction
+        await db.exec('BEGIN');
 
-        await logActivity(req.user.id, 'ADD_PART', 'JOB_ORDER', req.params.id, `Added ${quantity} of ${part.name}`);
+        try {
+            await db.run(
+                'INSERT INTO job_order_parts (id, joborderid, partid, quantity, unitprice) VALUES (?, ?, ?, ?, ?)',
+                [id, req.params.id, partId, quantity, part.sellingPrice]
+            );
 
-        res.status(201).json({ message: 'Part added to job' });
+            // Deduct from inventory
+            await db.run('UPDATE parts SET quantity = quantity - ? WHERE id = ?', [quantity, partId]);
+
+            await db.exec('COMMIT'); // Commit transaction
+
+            await logActivity(req.user.id, 'ADD_PART', 'JOB_ORDER', req.params.id, `Added ${quantity} of ${part.name}`);
+
+            res.status(201).json({ message: 'Part added to job' });
+        } catch (err) {
+            await db.exec('ROLLBACK');
+            throw err;
+        }
     } catch (error) {
         res.status(500).json({ message: error.message });
     }

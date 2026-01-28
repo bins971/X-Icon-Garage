@@ -205,9 +205,50 @@ router.patch('/orders/:id/tracking', protect, authorize('ADMIN', 'ADVISOR'), asy
 // @route   PATCH /admin/orders/:id
 // @desc    Update order status (generic)
 // @access  Private (Admin/Advisor)
+// @route   GET /orders
+// @desc    Get all orders (with optional archive filter)
+// @access  Private (Admin/Advisor)
+router.get('/orders', protect, authorize('ADMIN', 'ADVISOR'), async (req, res) => {
+    try {
+        const db = await getDb();
+        const showArchived = req.query.archived === 'true';
+
+        const orders = await db.all(`
+            SELECT 
+                id, 
+                customername as "customerName", 
+                email, 
+                phone, 
+                items, 
+                totalamount as "totalAmount", 
+                paymentmethod as "paymentMethod",
+                status, 
+                isArchived,
+                createdat as "createdAt", 
+                updatedat as "updatedAt" 
+            FROM online_orders 
+            WHERE isArchived = ?
+            ORDER BY createdat DESC
+        `, [showArchived ? 1 : 0]);
+
+        const parsedOrders = orders.map(o => ({
+            ...o,
+            items: JSON.parse(o.items)
+        }));
+
+        res.json(parsedOrders);
+    } catch (error) {
+        console.error('Get Orders Error:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+// @route   PATCH /orders/:id
+// @desc    Update order status or archive state
+// @access  Private (Admin/Advisor)
 router.patch('/orders/:id', protect, authorize('ADMIN', 'ADVISOR'), async (req, res) => {
     const { id } = req.params;
-    const { status } = req.body;
+    const { status, isArchived } = req.body;
 
     const db = await getDb();
 
@@ -219,6 +260,16 @@ router.patch('/orders/:id', protect, authorize('ADMIN', 'ADVISOR'), async (req, 
         if (!order) {
             await db.exec('ROLLBACK');
             return res.status(404).json({ message: 'Order not found' });
+        }
+
+        // Handle Archive Toggle
+        if (isArchived !== undefined) {
+            await db.run(
+                'UPDATE online_orders SET isArchived = ?, updatedat = CURRENT_TIMESTAMP WHERE id = ?',
+                [isArchived ? 1 : 0, id]
+            );
+            await db.exec('COMMIT');
+            return res.json({ message: `Order ${isArchived ? 'archived' : 'restored'} successfully` });
         }
 
         // Restock Logic if CANCELLED
@@ -237,10 +288,12 @@ router.patch('/orders/:id', protect, authorize('ADMIN', 'ADVISOR'), async (req, 
         }
 
         // Update order status
-        await db.run(
-            `UPDATE online_orders SET status = ?, updatedat = CURRENT_TIMESTAMP WHERE id = ?`,
-            [status, req.params.id]
-        );
+        if (status) {
+            await db.run(
+                `UPDATE online_orders SET status = ?, updatedat = CURRENT_TIMESTAMP WHERE id = ?`,
+                [status, req.params.id]
+            );
+        }
 
         await db.exec('COMMIT');
 
