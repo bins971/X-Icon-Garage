@@ -1,13 +1,19 @@
-import React, { useState, useEffect } from 'react';
-import { ShoppingBag, X, Clock, CreditCard, Wallet, ShieldCheck, Lock, ChevronRight, Package } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { ShoppingBag, X, Clock, CreditCard, Wallet, ShieldCheck, Lock, ChevronRight, Package, QrCode, Building, Smartphone } from 'lucide-react';
 import { useNotification } from '../context/NotificationContext';
 import api from '../api/client';
 
 const PartsShop = () => {
+    const navigate = useNavigate();
+    const notify = useNotification();
     const [parts, setParts] = useState([]);
     const [cart, setCart] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showCart, setShowCart] = useState(false);
+    const [checkoutMode, setCheckoutMode] = useState(false);
+    const [selectedPayment, setSelectedPayment] = useState('GCASH_MANUAL');
+    const [formData, setFormData] = useState({ name: '', phone: '', email: '' });
 
     const fetchParts = async () => {
         try {
@@ -25,15 +31,49 @@ const PartsShop = () => {
     }, []);
 
     const addToCart = (part) => {
+        let newCart;
         const exists = cart.find(i => i.id === part.id);
         if (exists) {
-            setCart(cart.map(i => i.id === part.id ? { ...i, qty: i.qty + 1 } : i));
+            newCart = cart.map(i => i.id === part.id ? { ...i, qty: i.qty + 1 } : i);
         } else {
-            setCart([...cart, { ...part, qty: 1 }]);
+            newCart = [...cart, { ...part, qty: 1 }];
         }
+        setCart(newCart);
+        localStorage.setItem('cart', JSON.stringify(newCart));
     };
 
     const total = cart.reduce((sum, i) => sum + (i.sellingPrice * i.qty), 0);
+
+    const handleManualOrder = async () => {
+        if (!formData.name || !formData.phone) {
+            notify.error("Name and Phone are required.");
+            return;
+        }
+        setLoading(true);
+        try {
+            await api.post('/shop/public/order', {
+                customerName: formData.name,
+                phone: formData.phone,
+                email: formData.email || 'no-email@example.com',
+                items: cart.map(i => ({ id: i.id, name: i.name, qty: i.qty, price: i.sellingPrice })),
+                totalAmount: total,
+                paymentMethod: selectedPayment,
+                deliveryMethod: 'PICKUP',
+                specialInstructions: `Manual Quick Checkout (${selectedPayment})`
+            });
+            setCart([]);
+            localStorage.removeItem('cart');
+            setShowCart(false);
+            setCheckoutMode(false);
+            setFormData({ name: '', phone: '', email: '' });
+            notify.success("Order placed! We will contact you for payment.");
+        } catch (err) {
+            console.error(err);
+            notify.error("Failed to place order.");
+        } finally {
+            setLoading(false);
+        }
+    };
 
     return (
         <div className="min-h-screen bg-black p-6 lg:p-12 animate-in fade-in duration-700">
@@ -147,12 +187,115 @@ const PartsShop = () => {
                                         <span className="text-4xl font-black text-white italic tracking-tight">₱{total.toLocaleString()}</span>
                                     </div>
 
-                                    <CheckoutForm
-                                        cart={cart}
-                                        total={total}
-                                        onClear={() => setCart([])}
-                                        onCancel={() => setShowCart(false)}
-                                    />
+                                    {checkoutMode ? (
+                                        <div className="space-y-4 animate-in slide-in-from-bottom-5">
+                                            <div className="p-4 bg-neutral-800 rounded-xl space-y-3 border border-neutral-700">
+                                                <h3 className="text-amber-500 font-bold text-xs uppercase tracking-widest flex items-center gap-2">
+                                                    <Lock size={12} /> Manual Secure Checkout
+                                                </h3>
+                                                <input
+                                                    type="text"
+                                                    placeholder="Full Name *"
+                                                    className="w-full bg-neutral-900 border border-neutral-700 p-3 rounded-lg text-sm text-white focus:border-amber-500 outline-none"
+                                                    value={formData.name}
+                                                    onChange={e => setFormData({ ...formData, name: e.target.value })}
+                                                />
+                                                <input
+                                                    type="tel"
+                                                    placeholder="Phone Number *"
+                                                    className="w-full bg-neutral-900 border border-neutral-700 p-3 rounded-lg text-sm text-white focus:border-amber-500 outline-none"
+                                                    value={formData.phone}
+                                                    onChange={e => setFormData({ ...formData, phone: e.target.value })}
+                                                />
+                                                <input
+                                                    type="email"
+                                                    placeholder="Email (Optional)"
+                                                    className="w-full bg-neutral-900 border border-neutral-700 p-3 rounded-lg text-sm text-white focus:border-amber-500 outline-none"
+                                                    value={formData.email}
+                                                    onChange={e => setFormData({ ...formData, email: e.target.value })}
+                                                />
+                                                <p className="text-[10px] text-neutral-500 leading-tight">
+                                                    By placing this order, you agree to pay via your selected method upon confirmation.
+                                                </p>
+
+                                                <div className="pt-2 border-t border-neutral-700">
+                                                    <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-2">Select Payment Method</p>
+                                                    <div className="grid grid-cols-3 gap-2">
+                                                        <button
+                                                            onClick={() => setSelectedPayment('GCASH_MANUAL')}
+                                                            className={`p-2 rounded-lg border flex flex-col items-center justify-center gap-1 transition-all ${selectedPayment === 'GCASH_MANUAL' ? 'bg-blue-500/20 border-blue-500 text-blue-400' : 'bg-neutral-900 border-neutral-800 text-neutral-500 hover:border-neutral-600'}`}
+                                                        >
+                                                            <Smartphone size={16} />
+                                                            <span className="text-[9px] font-bold">GCash</span>
+                                                        </button>
+                                                        <button
+                                                            onClick={() => setSelectedPayment('PAYMAYA')}
+                                                            className={`p-2 rounded-lg border flex flex-col items-center justify-center gap-1 transition-all ${selectedPayment === 'PAYMAYA' ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400' : 'bg-neutral-900 border-neutral-800 text-neutral-500 hover:border-neutral-600'}`}
+                                                        >
+                                                            <QrCode size={16} />
+                                                            <span className="text-[9px] font-bold">PayMaya</span>
+                                                        </button>
+                                                        <button
+                                                            onClick={() => setSelectedPayment('BANK_TRANSFER')}
+                                                            className={`p-2 rounded-lg border flex flex-col items-center justify-center gap-1 transition-all ${selectedPayment === 'BANK_TRANSFER' ? 'bg-amber-500/20 border-amber-500 text-amber-400' : 'bg-neutral-900 border-neutral-800 text-neutral-500 hover:border-neutral-600'}`}
+                                                        >
+                                                            <Building size={16} />
+                                                            <span className="text-[9px] font-bold">Bank</span>
+                                                        </button>
+                                                    </div>
+                                                </div>
+
+                                                {(selectedPayment === 'GCASH_MANUAL' || selectedPayment === 'PAYMAYA') && (
+                                                    <div className="bg-white p-4 rounded-xl flex flex-col items-center justify-center space-y-2 animate-in zoom-in-95 duration-300">
+                                                        <div className="w-32 h-32 bg-neutral-900 flex items-center justify-center rounded-lg relative overflow-hidden">
+                                                            {/* Placeholder QR - Replace with real image later */}
+                                                            <QrCode size={64} className="text-white opacity-50" />
+                                                            <div className="absolute inset-0 bg-gradient-to-tr from-transparent to-white/10" />
+                                                        </div>
+                                                        <p className="text-[10px] text-neutral-500 font-bold uppercase tracking-widest text-center">
+                                                            Scan to Pay via {selectedPayment === 'GCASH_MANUAL' ? 'GCash' : 'PayMaya'}
+                                                        </p>
+                                                        <p className="text-xs font-black text-neutral-800 tracking-tight">
+                                                            {selectedPayment === 'GCASH_MANUAL' ? 'Juan Dela Cruz • 0917 123 4567' : 'Juan D. • 0918 123 4567'}
+                                                        </p>
+                                                    </div>
+                                                )}
+
+                                                {selectedPayment === 'BANK_TRANSFER' && (
+                                                    <div className="bg-neutral-900 p-4 rounded-xl border border-neutral-800 space-y-2 animate-in slide-in-from-top-2">
+                                                        <p className="text-[10px] text-neutral-500 font-bold uppercase tracking-widest">Bank Details</p>
+                                                        <div className="space-y-1">
+                                                            <p className="text-xs text-white font-mono">BDO Unibank</p>
+                                                            <p className="text-xs text-white font-mono">Account: 0012 3456 7890</p>
+                                                            <p className="text-xs text-white font-mono">Name: X-ICON GARAGE</p>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                                <div className="flex gap-2">
+                                                    <button
+                                                        onClick={() => setCheckoutMode(false)}
+                                                        className="flex-1 bg-neutral-800 text-white font-bold py-3 rounded-xl hover:bg-neutral-700 transition-all text-xs uppercase tracking-widest"
+                                                    >
+                                                        Cancel
+                                                    </button>
+                                                    <button
+                                                        onClick={handleManualOrder}
+                                                        disabled={loading}
+                                                        className="flex-[2] bg-amber-500 hover:bg-amber-400 text-black font-black py-3 rounded-xl uppercase tracking-widest text-xs transition-all flex items-center justify-center gap-2"
+                                                    >
+                                                        {loading ? 'Sending...' : 'Place Order'}
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <button
+                                            onClick={() => setCheckoutMode(true)}
+                                            className="w-full bg-white hover:bg-neutral-200 text-black font-black py-4 rounded-xl uppercase tracking-widest text-sm transition-all flex items-center justify-center gap-2 active:scale-95 shadow-xl"
+                                        >
+                                            Checkout Now <ChevronRight size={16} />
+                                        </button>
+                                    )}
                                 </div>
                             )}
                         </div>
@@ -163,396 +306,6 @@ const PartsShop = () => {
     );
 };
 
-const CheckoutForm = ({ cart, total, onClear, onCancel }) => {
-    const notify = useNotification();
-    const [formData, setFormData] = useState({
-        customerName: '',
-        email: '',
-        phone: '',
-        paymentMethod: 'CASH',
-        cardNumber: '', expiry: '', cvv: '', gcashNumber: ''
-    });
-    const [status, setStatus] = useState('IDLE'); // IDLE, LOADING, SUCCESS
-    const [orderReference, setOrderReference] = useState(null); // To store order details after success
 
-    // Shipping State
-    const [deliveryMethod, setDeliveryMethod] = useState('PICKUP'); // PICKUP or DELIVERY
-    const [shippingAddress, setShippingAddress] = useState({
-        address: '',
-        city: '',
-        province: '',
-        postal: ''
-    });
-
-    const SHIPPING_FEE = 150;
-    const FREE_SHIPPING_THRESHOLD = 5000;
-
-    // Computed Values
-    const subtotal = cart.reduce((sum, i) => sum + (i.sellingPrice * i.qty), 0);
-    const shippingFee = (deliveryMethod === 'DELIVERY' && subtotal < FREE_SHIPPING_THRESHOLD) ? SHIPPING_FEE : 0;
-    const totalAmount = subtotal + shippingFee;
-
-    const handleCheckout = async (e) => {
-        e.preventDefault();
-
-        // Validation
-        if (!formData.customerName || !formData.email || !formData.phone) {
-            notify.error('Please fill in all contact details');
-            return;
-        }
-
-        if (deliveryMethod === 'DELIVERY' && (!shippingAddress.address || !shippingAddress.city || !shippingAddress.province)) {
-            notify.error('Please fill in complete shipping address');
-            return;
-        }
-
-        if (formData.paymentMethod === 'GCASH' && !formData.gcashNumber) {
-            notify.error('Please enter your GCash number.');
-            return;
-        }
-
-        setStatus('LOADING');
-
-        // 2. Simulate Delay
-        if (formData.paymentMethod !== 'CASH') {
-            await new Promise(resolve => setTimeout(resolve, 2500));
-        }
-
-        try {
-            await api.post('/shop/public/order', {
-                ...formData,
-                items: cart.map(i => ({ id: i.id, name: i.name, qty: i.qty, price: i.sellingPrice })),
-                totalAmount: totalAmount,
-                paymentMethod: formData.paymentMethod,
-                deliveryMethod,
-                shippingAddress: deliveryMethod === 'DELIVERY' ? shippingAddress.address : undefined,
-                shippingCity: deliveryMethod === 'DELIVERY' ? shippingAddress.city : undefined,
-                shippingProvince: deliveryMethod === 'DELIVERY' ? shippingAddress.province : undefined,
-                shippingPostal: deliveryMethod === 'DELIVERY' ? shippingAddress.postal : undefined,
-                cardNumber: formData.paymentMethod === 'CARD' ? formData.cardNumber : undefined,
-                gcashNumber: formData.paymentMethod === 'GCASH' ? formData.gcashNumber : undefined
-            });
-
-            // Set order reference details for success view
-            setOrderReference({
-                id: 'ORD-' + Math.random().toString(36).substr(2, 9).toUpperCase(),
-                amount: totalAmount,
-                paymentMethod: formData.paymentMethod
-            });
-
-            setStatus('SUCCESS');
-            onClear(); // Clear cart
-            setFormData({ customerName: '', email: '', phone: '', paymentMethod: 'CASH', cardNumber: '', gcashNumber: '' });
-            setDeliveryMethod('PICKUP'); // Reset delivery method
-            setShippingAddress({ address: '', city: '', province: '', postal: '' }); // Reset shipping address
-        } catch (error) {
-            console.error(error);
-            notify.error(error.response?.data?.message || 'Transaction failed. Server not responding.');
-            setStatus('IDLE');
-        }
-    };
-
-    if (status === 'LOADING') {
-        return (
-            <div className="flex flex-col items-center justify-center py-20 space-y-8 animate-in fade-in">
-                <div className="relative">
-                    <div className="w-24 h-24 border-[6px] border-neutral-800 border-t-emerald-500 rounded-full animate-spin"></div>
-                    <div className="absolute inset-0 flex items-center justify-center">
-                        <Lock size={32} className="text-emerald-500 animate-pulse" />
-                    </div>
-                </div>
-                <div className="text-center space-y-3">
-                    <h3 className="text-white font-black text-xl uppercase tracking-widest">
-                        {formData.paymentMethod === 'CARD' ? 'Processing...' : 'Verifying...'}
-                    </h3>
-                    <p className="text-neutral-500 text-xs font-medium tracking-wide">Secure transaction in progress</p>
-                </div>
-            </div>
-        );
-    }
-
-    return (
-        <form onSubmit={handleCheckout} className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            {/* Contact Info */}
-            <div className="space-y-4">
-                <div className="flex items-center gap-2 mb-2">
-                    <div className="w-1 h-4 bg-amber-500 rounded-full"></div>
-                    <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest">Contact Details</label>
-                </div>
-                <div className="space-y-3">
-                    <input type="text" placeholder="Full Name" className="w-full bg-neutral-900 border border-neutral-700 rounded-xl px-5 py-4 text-white text-sm focus:border-amber-500 focus:bg-neutral-800 focus:ring-1 focus:ring-amber-500/50 outline-none transition-all placeholder:text-neutral-500 font-medium"
-                        value={formData.customerName} onChange={e => setFormData({ ...formData, customerName: e.target.value })} />
-                    <input type="email" placeholder="Email Address" className="w-full bg-neutral-900 border border-neutral-700 rounded-xl px-5 py-4 text-white text-sm focus:border-amber-500 focus:bg-neutral-800 focus:ring-1 focus:ring-amber-500/50 outline-none transition-all placeholder:text-neutral-500 font-medium"
-                        value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} />
-                    <input type="tel" placeholder="Phone Number" className="w-full bg-neutral-900 border border-neutral-700 rounded-xl px-5 py-4 text-white text-sm focus:border-amber-500 focus:bg-neutral-800 focus:ring-1 focus:ring-amber-500/50 outline-none transition-all placeholder:text-neutral-500 font-medium"
-                        value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} />
-                </div>
-            </div>
-
-
-
-            {/* Delivery Method */}
-            <div className="space-y-4">
-                <div className="flex items-center gap-2 mb-2">
-                    <div className="w-1 h-4 bg-amber-500 rounded-full"></div>
-                    <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest">Delivery Options</label>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                    {[
-                        { id: 'PICKUP', icon: <Package size={18} />, label: 'Store Pickup' },
-                        { id: 'DELIVERY', icon: <Package size={18} />, label: 'Delivery' }
-                    ].map(method => (
-                        <button
-                            key={method.id}
-                            type="button"
-                            onClick={() => setDeliveryMethod(method.id)}
-                            disabled={
-                                (method.id === 'DELIVERY' && formData.paymentMethod === 'CASH') ||
-                                (method.id === 'PICKUP' && formData.paymentMethod === 'COD')
-                            }
-                            className={`flex flex-col items-center justify-center gap-2 py-4 rounded-2xl transition-all duration-300 border-2 relative overflow-hidden group 
-                                ${((method.id === 'DELIVERY' && formData.paymentMethod === 'CASH') || (method.id === 'PICKUP' && formData.paymentMethod === 'COD'))
-                                    ? 'opacity-50 cursor-not-allowed bg-neutral-900 border-neutral-800'
-                                    : ''
-                                }
-                                ${deliveryMethod === method.id && !((method.id === 'DELIVERY' && formData.paymentMethod === 'CASH') || (method.id === 'PICKUP' && formData.paymentMethod === 'COD'))
-                                    ? 'bg-white text-black border-white shadow-lg scale-[1.02]'
-                                    : 'bg-neutral-950/50 text-neutral-500 border-neutral-800 hover:border-neutral-700 hover:bg-neutral-900'
-                                }`}
-                        >
-                            <span className="text-[10px] font-black uppercase tracking-widest">{method.label}</span>
-                            {method.id === 'DELIVERY' && subtotal < FREE_SHIPPING_THRESHOLD && (
-                                <span className="text-[10px] font-bold text-amber-500">+₱{SHIPPING_FEE}</span>
-                            )}
-                            {method.id === 'DELIVERY' && subtotal >= FREE_SHIPPING_THRESHOLD && (
-                                <span className="text-[10px] font-bold text-emerald-500">FREE</span>
-                            )}
-                        </button>
-                    ))}
-                </div>
-
-                {deliveryMethod === 'DELIVERY' && (
-                    <div className="space-y-3 animate-in fade-in slide-in-from-top-2">
-                        <input type="text" placeholder="Street Address / URL" className="w-full bg-neutral-900 border border-neutral-700 rounded-xl px-5 py-4 text-white text-sm focus:border-amber-500 focus:bg-neutral-800 focus:ring-1 focus:ring-amber-500/50 outline-none transition-all placeholder:text-neutral-500 font-medium"
-                            value={shippingAddress.address} onChange={e => setShippingAddress({ ...shippingAddress, address: e.target.value })} />
-                        <div className="grid grid-cols-2 gap-3">
-                            <input type="text" placeholder="City" className="w-full bg-neutral-900 border border-neutral-700 rounded-xl px-5 py-4 text-white text-sm focus:border-amber-500 focus:bg-neutral-800 focus:ring-1 focus:ring-amber-500/50 outline-none transition-all placeholder:text-neutral-500 font-medium"
-                                value={shippingAddress.city} onChange={e => setShippingAddress({ ...shippingAddress, city: e.target.value })} />
-                            <input type="text" placeholder="Province" className="w-full bg-neutral-900 border border-neutral-700 rounded-xl px-5 py-4 text-white text-sm focus:border-amber-500 focus:bg-neutral-800 focus:ring-1 focus:ring-amber-500/50 outline-none transition-all placeholder:text-neutral-500 font-medium"
-                                value={shippingAddress.province} onChange={e => setShippingAddress({ ...shippingAddress, province: e.target.value })} />
-                        </div>
-                        <input type="text" placeholder="Postal Code" className="w-full bg-neutral-900 border border-neutral-700 rounded-xl px-5 py-4 text-white text-sm focus:border-amber-500 focus:bg-neutral-800 focus:ring-1 focus:ring-amber-500/50 outline-none transition-all placeholder:text-neutral-500 font-medium"
-                            value={shippingAddress.postal} onChange={e => setShippingAddress({ ...shippingAddress, postal: e.target.value })} />
-                    </div>
-                )}
-            </div>
-
-            {/* Payment Method */}
-            <div className="space-y-4">
-                <div className="flex items-center gap-2 mb-2">
-                    <div className="w-1 h-4 bg-amber-500 rounded-full"></div>
-                    <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest">Payment Method</label>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                    {[
-                        { id: 'BANK_TRANSFER', icon: <CreditCard size={18} />, label: 'Bank Transfer', badge: 'Manual' },
-                        { id: 'GCASH_MANUAL', icon: <span className="font-black text-xs">GC</span>, label: 'GCash', badge: 'Manual' },
-                        { id: 'CARD', icon: <CreditCard size={18} />, label: 'Card', badge: 'Offline', disabled: true },
-                        { id: 'COD', icon: <Wallet size={18} />, label: 'COD', badge: 'Delivery' },
-                        { id: 'CASH', icon: <Wallet size={18} />, label: 'Cash', badge: 'Pickup' }
-                    ].map(method => (
-                        <button
-                            key={method.id}
-                            type="button"
-                            onClick={() => {
-                                if (method.disabled) return;
-                                setFormData({ ...formData, paymentMethod: method.id });
-                                if (method.id === 'CASH') setDeliveryMethod('PICKUP');
-                                if (method.id === 'COD') setDeliveryMethod('DELIVERY');
-                            }}
-                            disabled={
-                                method.disabled ||
-                                (method.id === 'DELIVERY' && formData.paymentMethod === 'CASH') ||
-                                (method.id === 'PICKUP' && formData.paymentMethod === 'COD')
-                            }
-                            className={`flex flex-col items-center justify-center gap-2 py-4 rounded-2xl transition-all duration-300 border-2 relative overflow-hidden group 
-                                ${method.disabled ? 'opacity-40 cursor-not-allowed bg-neutral-900 border-neutral-800' :
-                                    formData.paymentMethod === method.id
-                                        ? 'bg-white text-black border-white shadow-lg scale-[1.02]'
-                                        : 'bg-neutral-950/50 text-neutral-500 border-neutral-800 hover:border-neutral-700 hover:bg-neutral-900'
-                                }`}
-                        >
-                            {method.badge && (
-                                <span className={`absolute top-1 right-1 text-[8px] font-black px-2 py-0.5 rounded-full ${formData.paymentMethod === method.id ? 'bg-black text-white' : 'bg-neutral-800 text-neutral-500'
-                                    }`}>
-                                    {method.badge}
-                                </span>
-                            )}
-                            <div className={`transition-transform duration-300 ${formData.paymentMethod === method.id ? 'scale-110' : 'group-hover:scale-110'}`}>
-                                {method.icon}
-                            </div>
-                            <span className="text-[10px] font-black uppercase tracking-widest">{method.label}</span>
-                        </button>
-                    ))}
-                </div>
-            </div>
-
-            {/* Dynamic Payment Content */}
-            <div className="min-h-[80px] transition-all duration-300">
-                {formData.paymentMethod === 'BANK_TRANSFER' && (
-                    <div className="bg-blue-500/10 border border-blue-500/30 rounded-2xl p-5 animate-in fade-in zoom-in-95 space-y-4">
-                        <div className="flex items-center gap-2 mb-3">
-                            <CreditCard size={20} className="text-blue-500" />
-                            <h4 className="text-sm font-black text-blue-500 uppercase tracking-widest">Bank Transfer Options</h4>
-                        </div>
-
-                        {/* BDO */}
-                        <div className="bg-black/30 rounded-xl p-4 space-y-2 border-l-4 border-blue-400">
-                            <div className="text-xs font-black text-blue-400 uppercase tracking-wider mb-2">BDO</div>
-                            <div className="flex justify-between">
-                                <span className="text-xs text-neutral-400">Account Name:</span>
-                                <span className="text-sm font-bold text-white">X-ICON GARAGE</span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span className="text-xs text-neutral-400">Account Number:</span>
-                                <span className="text-lg font-black text-blue-400 font-mono">1234567890</span>
-                            </div>
-                        </div>
-
-                        {/* BPI */}
-                        <div className="bg-black/30 rounded-xl p-4 space-y-2 border-l-4 border-red-400">
-                            <div className="text-xs font-black text-red-400 uppercase tracking-wider mb-2">BPI</div>
-                            <div className="flex justify-between">
-                                <span className="text-xs text-neutral-400">Account Name:</span>
-                                <span className="text-sm font-bold text-white">X-ICON GARAGE</span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span className="text-xs text-neutral-400">Account Number:</span>
-                                <span className="text-lg font-black text-red-400 font-mono">0987654321</span>
-                            </div>
-                        </div>
-
-                        <div className="bg-amber-500/10 border-l-4 border-amber-500 p-3 rounded">
-                            <p className="text-xs text-amber-200 font-medium">
-                                💳 Choose any bank above. Use your Order ID as reference when transferring.
-                            </p>
-                        </div>
-                    </div>
-                )}
-
-                {formData.paymentMethod === 'GCASH_MANUAL' && (
-                    <div className="bg-[#007DF2]/10 border border-[#007DF2]/30 rounded-2xl p-5 animate-in fade-in zoom-in-95 space-y-4">
-                        <div className="flex items-center gap-2 mb-3">
-                            <span className="text-[#007DF2] font-black text-lg">GC</span>
-                            <h4 className="text-sm font-black text-[#007DF2] uppercase tracking-widest">GCash Payment Details</h4>
-                        </div>
-                        <div className="bg-black/30 rounded-xl p-4 space-y-2">
-                            <div className="flex justify-between">
-                                <span className="text-xs text-neutral-400 uppercase tracking-wider">GCash Number:</span>
-                                <span className="text-lg font-black text-[#007DF2] font-mono">09171234567</span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span className="text-xs text-neutral-400 uppercase tracking-wider">Account Name:</span>
-                                <span className="text-sm font-bold text-white">X-ICON GARAGE</span>
-                            </div>
-                        </div>
-                        <div className="bg-[#007DF2]/10 border-l-4 border-[#007DF2] p-3 rounded">
-                            <p className="text-xs text-blue-200 font-medium">
-                                📸 Send payment via GCash and screenshot the receipt. You'll receive instructions to upload proof of payment.
-                            </p>
-                        </div>
-                    </div>
-                )}
-
-                {formData.paymentMethod === 'CARD' && (
-                    <div className="bg-neutral-950/50 border border-neutral-800 rounded-2xl p-5 animate-in fade-in zoom-in-95 space-y-4 relative overflow-hidden">
-                        <div className="absolute top-0 right-0 p-4 opacity-10">
-                            <CreditCard size={64} className="text-white" />
-                        </div>
-                        <div className="space-y-3 relative z-10">
-                            <label className="text-[10px] font-black text-amber-500 uppercase tracking-widest ml-1">Card Details</label>
-                            <div className="relative">
-                                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-500">
-                                    <CreditCard size={16} />
-                                </span>
-                                <input
-                                    type="text"
-                                    placeholder="0000 0000 0000 0000"
-                                    className="w-full bg-neutral-900 border border-neutral-800 rounded-xl pl-12 pr-4 py-3 text-white text-sm focus:border-amber-500 outline-none transition-all placeholder:text-neutral-700 font-mono tracking-wider"
-                                    value={formData.cardNumber || ''}
-                                    onChange={e => setFormData({ ...formData, cardNumber: e.target.value.replace(/\D/g, '').slice(0, 16) })}
-                                />
-                            </div>
-                            <div className="grid grid-cols-2 gap-3">
-                                <input
-                                    type="text"
-                                    placeholder="MM/YY"
-                                    className="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-4 py-3 text-white text-sm focus:border-amber-500 outline-none transition-all placeholder:text-neutral-700 font-mono text-center"
-                                    value={formData.expiry || ''}
-                                    onChange={e => setFormData({ ...formData, expiry: e.target.value })}
-                                />
-                                <input
-                                    type="password"
-                                    placeholder="CVV"
-                                    className="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-4 py-3 text-white text-sm focus:border-amber-500 outline-none transition-all placeholder:text-neutral-700 font-mono text-center"
-                                    value={formData.cvv || ''}
-                                    onChange={e => setFormData({ ...formData, cvv: e.target.value.replace(/\D/g, '').slice(0, 3) })}
-                                />
-                            </div>
-                        </div>
-                        <div className="pt-3 border-t border-neutral-800 flex items-center justify-center gap-2">
-                            <ShieldCheck size={14} className="text-emerald-500" />
-                            <span className="text-[9px] font-black text-neutral-500 uppercase tracking-[0.2em]">Encrypted Transaction</span>
-                        </div>
-                    </div>
-                )}
-
-                {formData.paymentMethod === 'GCASH' && (
-                    <div className="bg-[#007DF2]/10 border border-[#007DF2]/30 rounded-2xl p-5 animate-in fade-in zoom-in-95 space-y-3 relative overflow-hidden">
-                        <div className="absolute top-[-10px] right-[-10px] w-20 h-20 bg-[#007DF2]/20 rounded-full blur-xl"></div>
-                        <p className="text-[10px] font-black text-[#007DF2] uppercase tracking-widest mb-1 relative z-10">GCash Mobile Number</p>
-                        <div className="relative z-10">
-                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#007DF2] text-sm font-bold">+63</span>
-                            <input type="tel" placeholder="912 345 6789" maxLength="10" className="w-full bg-black/50 border border-[#007DF2]/30 rounded-xl pl-12 pr-4 py-3 text-white text-lg font-bold focus:border-[#007DF2] outline-none transition-all placeholder:text-neutral-600 font-mono tracking-wide"
-                                value={formData.gcashNumber || ''} onChange={e => setFormData({ ...formData, gcashNumber: e.target.value })} />
-                        </div>
-                    </div>
-                )}
-                {formData.paymentMethod === 'CASH' && (
-                    <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-6 text-center animate-in fade-in zoom-in-95 flex items-center justify-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-500">
-                            <Wallet size={20} />
-                        </div>
-                        <div className="text-left">
-                            <p className="text-emerald-500 text-xs font-black uppercase tracking-wider">Pay at Counter</p>
-                            <p className="text-emerald-500/60 text-[10px] font-bold">Upon order pickup</p>
-                        </div>
-                    </div>
-                )}
-
-                {formData.paymentMethod === 'COD' && (
-                    <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-6 text-center animate-in fade-in zoom-in-95 flex items-center justify-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-amber-500/20 flex items-center justify-center text-amber-500">
-                            <Package size={20} />
-                        </div>
-                        <div className="text-left">
-                            <p className="text-amber-500 text-xs font-black uppercase tracking-wider">Cash on Delivery</p>
-                            <p className="text-amber-500/60 text-[10px] font-bold">Pay when you receive your order</p>
-                        </div>
-                    </div>
-                )}
-            </div>
-
-            <button
-                type="submit"
-                className="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-black font-black py-4 rounded-2xl transition-all shadow-xl shadow-amber-500/10 hover:shadow-amber-500/20 hover:scale-[1.02] active:scale-[0.98] uppercase tracking-[0.2em] text-xs flex items-center justify-center gap-2 group relative overflow-hidden"
-            >
-                <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 blur-md"></div>
-                <span className="relative z-10">{formData.paymentMethod === 'CARD' ? 'Secure Checkout' : 'Place Order'}</span>
-                <ChevronRight size={16} className="relative z-10 group-hover:translate-x-1 transition-transform" />
-            </button>
-        </form>
-    );
-};
 
 export default PartsShop;

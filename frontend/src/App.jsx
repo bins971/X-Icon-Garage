@@ -19,7 +19,7 @@ import CustomerProfile from './pages/CustomerProfile';
 import OrderReceipt from './pages/OrderReceipt';
 
 import AppointmentManager from './pages/AppointmentManager';
-import OrderManager from './pages/OrderManager';
+
 
 import InventoryList from './pages/InventoryList';
 import InvoiceList from './pages/InvoiceList';
@@ -27,6 +27,7 @@ import ReceiptView from './pages/ReceiptView';
 import CustomerHistory from './pages/CustomerHistory';
 import SecuritySettings from './pages/SecuritySettings';
 import PendingPayments from './pages/PendingPayments';
+
 
 import PublicNavbar from './components/PublicNavbar';
 import Home from './pages/Home';
@@ -75,6 +76,7 @@ const App = () => {
             <Route path="/my-garage" element={<PublicLayout><MyGarage /></PublicLayout>} />
             <Route path="/profile" element={<PublicLayout><CustomerProfile /></PublicLayout>} />
             <Route path="/order-receipt/:id" element={<PublicLayout><OrderReceipt /></PublicLayout>} />
+
             <Route path="/receipt/:id" element={<PublicLayout><ReceiptView /></PublicLayout>} />
 
             {/* Admin Protected Routes */}

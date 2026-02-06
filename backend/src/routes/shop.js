@@ -55,7 +55,7 @@ router.post('/public/order', async (req, res) => {
     }
 
     // Payment Validation - Skip for manual payment methods
-    const manualPaymentMethods = ['BANK_TRANSFER', 'GCASH_MANUAL'];
+    const manualPaymentMethods = ['BANK_TRANSFER', 'GCASH_MANUAL', 'PAYMAYA'];
 
     if (paymentMethod === 'CARD' && !validateCardNumber(req.body.cardNumber || '')) {
         console.log('[ORDER] Card validation failed:', req.body.cardNumber);
