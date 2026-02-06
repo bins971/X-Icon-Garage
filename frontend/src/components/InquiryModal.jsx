@@ -43,7 +43,7 @@ const InquiryModal = ({ part, isOpen, onClose }) => {
 
     return (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[60] flex items-center justify-center p-4 animate-in fade-in duration-300">
-            <div className="bg-neutral-900 border border-neutral-800 w-full max-w-md rounded-2xl p-6 shadow-2xl animate-in zoom-in-95 duration-300">
+            <div className="bg-neutral-900 border border-neutral-800 w-full max-w-md max-h-[85vh] overflow-y-auto custom-scrollbar rounded-2xl p-6 shadow-2xl animate-in zoom-in-95 duration-300">
                 <div className="flex justify-between items-center mb-6">
                     <div>
                         <h3 className="text-xl font-black text-white italic uppercase">Ask a Question</h3>
