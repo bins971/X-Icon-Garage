@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ShoppingBag, X, Clock, CreditCard, Wallet, ShieldCheck, Lock, ChevronRight, Package, QrCode, Building, Smartphone } from 'lucide-react';
 import { useNotification } from '../context/NotificationContext';
@@ -14,6 +14,15 @@ const PartsShop = () => {
     const [checkoutMode, setCheckoutMode] = useState(false);
     const [selectedPayment, setSelectedPayment] = useState('GCASH_MANUAL');
     const [formData, setFormData] = useState({ name: '', phone: '', email: '' });
+    const checkoutRef = useRef(null);
+
+    useEffect(() => {
+        if (checkoutMode && checkoutRef.current) {
+            setTimeout(() => {
+                checkoutRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 100);
+        }
+    }, [checkoutMode]);
 
     const fetchParts = async () => {
         try {
@@ -188,7 +197,7 @@ const PartsShop = () => {
                                     </div>
 
                                     {checkoutMode ? (
-                                        <div className="space-y-4 animate-in slide-in-from-bottom-5">
+                                        <div ref={checkoutRef} className="space-y-4 animate-in slide-in-from-bottom-5">
                                             <div className="p-4 bg-neutral-800 rounded-xl space-y-3 border border-neutral-700">
                                                 <h3 className="text-amber-500 font-bold text-xs uppercase tracking-widest flex items-center gap-2">
                                                     <Lock size={12} /> Manual Secure Checkout
@@ -248,7 +257,6 @@ const PartsShop = () => {
                                                 {(selectedPayment === 'GCASH_MANUAL' || selectedPayment === 'PAYMAYA') && (
                                                     <div className="bg-white p-4 rounded-xl flex flex-col items-center justify-center space-y-2 animate-in zoom-in-95 duration-300">
                                                         <div className="w-32 h-32 bg-neutral-900 flex items-center justify-center rounded-lg relative overflow-hidden">
-                                                            {/* Placeholder QR - Replace with real image later */}
                                                             <QrCode size={64} className="text-white opacity-50" />
                                                             <div className="absolute inset-0 bg-gradient-to-tr from-transparent to-white/10" />
                                                         </div>
@@ -306,6 +314,8 @@ const PartsShop = () => {
     );
 };
 
-
-
 export default PartsShop;
+
+
+
+

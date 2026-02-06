@@ -4,7 +4,7 @@ import api from '../api/client';
 import { useNotification } from '../context/NotificationContext';
 import ConfirmModal from '../components/ConfirmModal';
 
-const OrderCard = ({ order = {}, updateTracking, deleteOrder, confirmPayment, markCompleted, processing, formatDate, getStatusColor, requestArchive }) => {
+const OrderCard = ({ order = {}, updateTracking, deleteOrder, confirmPayment, markCompleted, processing, formatDate, getStatusColor, requestArchive, manualDeduct }) => {
     const [expanded, setExpanded] = useState(false);
     const [localTracking, setLocalTracking] = useState({ courier: 'LBC', number: '' });
 
@@ -40,6 +40,13 @@ const OrderCard = ({ order = {}, updateTracking, deleteOrder, confirmPayment, ma
                     </div>
                     <div className="text-right">
                         <div className="flex justify-end gap-2 mb-1">
+                            <button
+                                onClick={() => manualDeduct(order.id)}
+                                className="text-neutral-600 hover:text-amber-500 transition-colors p-1"
+                                title="Force Deduct Stock (Manual Override)"
+                            >
+                                <Package size={16} />
+                            </button>
                             <button
                                 onClick={() => requestArchive(order.id, !order.isArchived)}
                                 className={`transition-colors p-1 rounded-md ${order.isArchived ? 'bg-blue-500/20 text-blue-500' : 'text-neutral-600 hover:text-blue-500'}`}
@@ -266,6 +273,27 @@ export default function PendingPayments() {
         });
     };
 
+    const manualDeduct = (orderId) => {
+        setModalConfig({
+            isOpen: true,
+            title: "Force Stock Deduction?",
+            message: "This will manually subtract items from inventory. Use this ONLY if stock wasn't deducted automatically.",
+            type: "warning",
+            confirmLabel: "Deduct Now",
+            onConfirm: async () => {
+                setProcessing(orderId);
+                try {
+                    await api.post(`/admin/orders/${orderId}/deduct-stock`);
+                    notify.success('Stock deducted successfully');
+                } catch (error) {
+                    notify.error(error.response?.data?.message || 'Failed to deduct stock');
+                } finally {
+                    setProcessing(null);
+                }
+            }
+        });
+    };
+
     // Removed global trackingInputs state as it's now handled locally in OrderCard for performance
     const updateTracking = async (orderId, courier, trackingNumber) => {
         if (!trackingNumber) return notify.error('Please enter a tracking number');
@@ -436,6 +464,7 @@ export default function PendingPayments() {
                             formatDate={formatDate}
                             getStatusColor={getStatusColor}
                             requestArchive={requestArchive}
+                            manualDeduct={manualDeduct}
                         />
                     )}
                 </div>
@@ -458,6 +487,7 @@ export default function PendingPayments() {
                             formatDate={formatDate}
                             getStatusColor={getStatusColor}
                             requestArchive={requestArchive}
+                            manualDeduct={manualDeduct}
                         />
                     )}
                 </div>
@@ -480,6 +510,7 @@ export default function PendingPayments() {
                             formatDate={formatDate}
                             getStatusColor={getStatusColor}
                             requestArchive={requestArchive}
+                            manualDeduct={manualDeduct}
                         />
                     )}
                 </div>

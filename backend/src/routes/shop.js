@@ -113,7 +113,7 @@ router.post('/public/order', async (req, res) => {
                 throw new Error(`Part ${item.name} is no longer available for sale.`);
             }
 
-            // Deduct Stock immediately
+            // Deduct Stock immediately (Auto-Deduction Restored)
             const result = await db.run(
                 'UPDATE parts SET quantity = quantity - ? WHERE id = ? AND quantity >= ?',
                 [item.qty, item.id, item.qty]

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Package, AlertTriangle, Trash2, CheckSquare, X, Check } from 'lucide-react';
+import { Plus, Package, AlertTriangle, Trash2, CheckSquare, X, Check, Settings2 } from 'lucide-react';
 import { useNotification } from '../context/NotificationContext';
 import api from '../api/client';
 
@@ -7,6 +7,7 @@ const InventoryList = () => {
     const notify = useNotification();
     const [parts, setParts] = useState([]);
     const [showModal, setShowModal] = useState(false);
+    const [adjustmentConfig, setAdjustmentConfig] = useState(null); // { partId, currentQty, isOpen: false }
 
     // Multi-select Delete State
     const [deleteMode, setDeleteMode] = useState(false);
@@ -144,6 +145,13 @@ const InventoryList = () => {
                                     <p className="text-xl font-bold text-emerald-500">₱{p.sellingPrice}</p>
                                 </div>
                             </div>
+                            {/* Stock Adjustment Button */}
+                            <button
+                                onClick={(e) => { e.stopPropagation(); setAdjustmentConfig({ part: p, isOpen: true }); }}
+                                className="mt-3 w-full bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-2"
+                            >
+                                <Settings2 size={14} /> Adjust Stock
+                            </button>
                         </div>
                     );
                 })}
@@ -161,6 +169,100 @@ const InventoryList = () => {
                     onConfirm={handleBatchDelete}
                 />
             )}
+
+            {adjustmentConfig?.isOpen && (
+                <StockAdjustmentModal
+                    part={adjustmentConfig.part}
+                    onClose={() => setAdjustmentConfig(null)}
+                    onSuccess={() => { setAdjustmentConfig(null); fetchParts(); }}
+                />
+            )}
+        </div>
+    );
+};
+
+const StockAdjustmentModal = ({ part, onClose, onSuccess }) => {
+    const notify = useNotification();
+    const [action, setAction] = useState('ADD'); // ADD or DEDUCT
+    const [quantity, setQuantity] = useState(1);
+    const [reason, setReason] = useState('');
+    const [loading, setLoading] = useState(false);
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setLoading(true);
+        try {
+            await api.patch(`/parts/${part.id}/stock`, { action, quantity, reason });
+            notify.success(`Stock ${action === 'ADD' ? 'added' : 'deducted'} successfully`);
+            onSuccess();
+        } catch (error) {
+            notify.error(error.response?.data?.message || 'Failed to update stock');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-[60] animate-in fade-in">
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 w-full max-w-sm shadow-2xl animate-in zoom-in-95">
+                <div className="flex justify-between items-start mb-4">
+                    <div>
+                        <h3 className="text-xl font-bold text-white">Adjust Stock</h3>
+                        <p className="text-slate-400 text-sm">{part.name} (Current: {part.quantity})</p>
+                    </div>
+                    <button onClick={onClose} className="text-slate-500 hover:text-white"><X size={20} /></button>
+                </div>
+
+                <form onSubmit={handleSubmit} className="space-y-4">
+                    <div className="grid grid-cols-2 gap-2 bg-slate-950 p-1 rounded-xl">
+                        <button
+                            type="button"
+                            onClick={() => setAction('ADD')}
+                            className={`py-2 rounded-lg text-sm font-bold transition-all ${action === 'ADD' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-500 hover:text-white'}`}
+                        >
+                            + Add Stock
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setAction('DEDUCT')}
+                            className={`py-2 rounded-lg text-sm font-bold transition-all ${action === 'DEDUCT' ? 'bg-amber-600 text-white shadow-lg' : 'text-slate-500 hover:text-white'}`}
+                        >
+                            - Deduct Stock
+                        </button>
+                    </div>
+
+                    <div>
+                        <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">Quantity</label>
+                        <input
+                            type="number"
+                            min="1"
+                            required
+                            className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white text-lg font-mono focus:border-blue-500 outline-none"
+                            value={quantity}
+                            onChange={e => setQuantity(Number(e.target.value))}
+                        />
+                    </div>
+
+                    <div>
+                        <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">Reason (Optional)</label>
+                        <input
+                            type="text"
+                            placeholder="e.g. Broken, Found extra, Manual correction"
+                            className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-white text-sm focus:border-blue-500 outline-none"
+                            value={reason}
+                            onChange={e => setReason(e.target.value)}
+                        />
+                    </div>
+
+                    <button
+                        type="submit"
+                        disabled={loading}
+                        className={`w-full font-bold py-3 rounded-xl text-white transition-all ${action === 'ADD' ? 'bg-blue-600 hover:bg-blue-500' : 'bg-amber-600 hover:bg-amber-500'} ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    >
+                        {loading ? 'Updating...' : `Confirm ${action === 'ADD' ? 'Addition' : 'Deduction'}`}
+                    </button>
+                </form>
+            </div>
         </div>
     );
 };

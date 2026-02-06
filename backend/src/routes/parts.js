@@ -51,7 +51,7 @@ router.post('/', protect, authorize('ADMIN', 'ADVISOR'), upload.single('image'),
         const id = crypto.randomUUID();
         await db.run(
             'INSERT INTO parts (id, partNumber, name, description, supplier, buyingPrice, sellingPrice, quantity, minThreshold, isPublic, image) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-            [id, partNumber, name, description, supplier, buyingPrice, sellingPrice, quantity || 0, minThreshold || 5, isPublic !== undefined ? isPublic : 1, image]
+            [id, partNumber, name, description, supplier, Number(buyingPrice), Number(sellingPrice), Number(quantity) || 0, Number(minThreshold) || 5, (String(isPublic) === 'true' || isPublic === '1' || isPublic === 1) ? 1 : 0, image]
         );
         return id;
     };
@@ -101,6 +101,53 @@ router.post('/', protect, authorize('ADMIN', 'ADVISOR'), upload.single('image'),
         }
         console.error('Create Part Error:', error);
         res.status(500).json({ message: error.message });
+    }
+});
+
+// @desc    Adjust stock quantity (Add/Deduct manually)
+// @route   PATCH /api/parts/:id/stock
+router.patch('/:id/stock', protect, authorize('ADMIN', 'ADVISOR'), async (req, res) => {
+    const { id } = req.params;
+    const { action, quantity, reason } = req.body; // action: 'ADD' | 'DEDUCT'
+
+    if (!['ADD', 'DEDUCT'].includes(action) || !quantity || quantity <= 0) {
+        return res.status(400).json({ message: 'Invalid action or quantity' });
+    }
+
+    const db = await getDb();
+
+    try {
+        const part = await db.get('SELECT * FROM parts WHERE id = ?', [id]);
+        if (!part) return res.status(404).json({ message: 'Part not found' });
+
+        let newQuantity = part.quantity;
+        if (action === 'ADD') {
+            newQuantity += Number(quantity);
+        } else {
+            newQuantity -= Number(quantity);
+            // Allow negative? Ideally no, but manual override might need it. Let's warn but allow? 
+            // Better to block if it goes below zero for sanity, unless explicitly forced. 
+            // For now, simple block.
+            if (newQuantity < 0) {
+                return res.status(400).json({ message: `Insufficient stock. Current: ${part.quantity}` });
+            }
+        }
+
+        await db.run('UPDATE parts SET quantity = ?, updatedat = CURRENT_TIMESTAMP WHERE id = ?', [newQuantity, id]);
+
+        await logActivity(
+            req.user.id,
+            'UPDATE',
+            'INVENTORY',
+            id,
+            `${action} stock by ${quantity}. Reason: ${reason || 'Manual Adjustment'}`
+        );
+
+        res.json({ message: 'Stock updated successfully', newQuantity });
+
+    } catch (error) {
+        console.error('Stock Adjustment Error:', error);
+        res.status(500).json({ message: 'Server error' });
     }
 });
 

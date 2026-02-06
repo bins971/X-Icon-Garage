@@ -3,6 +3,7 @@ const router = express.Router();
 const { getDb } = require('../config/database');
 const { protect, authorize } = require('../middleware/auth');
 const { sendPaymentConfirmation, sendTrackingNotification } = require('../services/emailService');
+const { logActivity } = require('../utils/logger');
 
 // @route   GET /admin/orders/pending-payment
 // @desc    Get all orders awaiting payment confirmation
@@ -69,6 +70,7 @@ router.post('/orders/:id/confirm-payment', protect, authorize('ADMIN', 'ADVISOR'
                 id,
                 customername as "customerName",
                 email,
+                items,
                 totalamount as "totalAmount",
                 paymentmethod as "paymentMethod",
                 shipping_fee as "shippingFee",
@@ -78,12 +80,16 @@ router.post('/orders/:id/confirm-payment', protect, authorize('ADMIN', 'ADVISOR'
         `, [id]);
 
         if (!order) {
+            await db.exec('ROLLBACK');
             return res.status(404).json({ message: 'Order not found' });
         }
 
         if (order.status !== 'PENDING_PAYMENT' && order.status !== 'PENDING') {
+            await db.exec('ROLLBACK');
             return res.status(400).json({ message: 'Order is not awaiting confirmation' });
         }
+
+
 
         // Update order status to PROCESSING and set updatedat
         console.log(`[ADMIN] Confirming payment for order ${id}. Current Status: ${order.status}`);
@@ -95,15 +101,6 @@ router.post('/orders/:id/confirm-payment', protect, authorize('ADMIN', 'ADVISOR'
         `, [id]);
 
         console.log(`[ADMIN] DB Status Updated for ${id}`);
-
-        // Parse items from JSON string
-        let items = [];
-        try {
-            items = order.items ? JSON.parse(order.items) : [];
-        } catch (e) {
-            console.error('[ADMIN] JSON Parse Error for items:', e.message, order.items);
-            // Continue with empty items if parse fails
-        }
 
         // Send confirmation email
         try {
@@ -130,6 +127,54 @@ router.post('/orders/:id/confirm-payment', protect, authorize('ADMIN', 'ADVISOR'
     } catch (error) {
         console.error('[ADMIN] Error confirming payment CRITICAL:', error);
         res.status(500).json({ message: 'Server error', error: error.message });
+    }
+});
+
+// @route   POST /admin/orders/:id/deduct-stock
+// @desc    Manually deduct stock for a specific order (Force Override)
+// @access  Private (Admin/Advisor)
+router.post('/orders/:id/deduct-stock', protect, authorize('ADMIN', 'ADVISOR'), async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        const db = await getDb();
+        const order = await db.get('SELECT * FROM online_orders WHERE id = ?', [id]);
+
+        if (!order) {
+            return res.status(404).json({ message: 'Order not found' });
+        }
+
+        console.log(`[ADMIN] Manual stock deduction triggered for order ${id}`);
+
+        // Start Transaction
+        await db.exec('BEGIN');
+
+        try {
+            let items = [];
+            try { items = JSON.parse(order.items); } catch (e) { }
+
+            for (const item of items) {
+                const part = await db.get('SELECT quantity, name FROM parts WHERE id = ?', [item.id]);
+                if (!part) throw new Error(`Part ${item.name} not found.`);
+
+                if (part.quantity < item.qty) {
+                    throw new Error(`Insufficient stock for ${item.name}. Available: ${part.quantity}`);
+                }
+
+                await db.run('UPDATE parts SET quantity = quantity - ? WHERE id = ?', [item.qty, item.id]);
+            }
+
+            await db.exec('COMMIT');
+            await logActivity(req.user.id, 'UPDATE', 'INVENTORY', id, 'Manually deducted stock for order');
+            res.json({ message: 'Stock successfully deducted manually.' });
+
+        } catch (err) {
+            await db.exec('ROLLBACK');
+            throw err;
+        }
+    } catch (error) {
+        console.error('[ADMIN] Manual deduction error:', error);
+        res.status(500).json({ message: error.message || 'Failed to deduct stock' });
     }
 });
 
@@ -262,6 +307,7 @@ router.patch('/orders/:id', protect, authorize('ADMIN', 'ADVISOR'), async (req, 
             return res.status(404).json({ message: 'Order not found' });
         }
 
+        // Logic check: If moving from PENDING/PENDING_PAYMENT -> PROCESSING/SHIPPED/COMPLETED (Manual Status Change)
         // Handle Archive Toggle
         if (isArchived !== undefined) {
             await db.run(
