@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ShoppingBag, X, Clock, CreditCard, Wallet, ShieldCheck, Lock, ChevronRight, Package, QrCode, Building, Smartphone } from 'lucide-react';
+import { ShoppingBag, X, Clock, CreditCard, Wallet, ShieldCheck, Lock, ChevronRight, Package, QrCode, Building, Smartphone, MessageCircle } from 'lucide-react';
 import { useNotification } from '../context/NotificationContext';
 import api from '../api/client';
+import InquiryModal from '../components/InquiryModal';
 
 const PartsShop = () => {
     const navigate = useNavigate();
@@ -14,6 +15,7 @@ const PartsShop = () => {
     const [checkoutMode, setCheckoutMode] = useState(false);
     const [selectedPayment, setSelectedPayment] = useState('GCASH_MANUAL');
     const [formData, setFormData] = useState({ name: '', phone: '', email: '' });
+    const [inquiryConfig, setInquiryConfig] = useState(null);
     const checkoutRef = useRef(null);
 
     useEffect(() => {
@@ -128,16 +130,25 @@ const PartsShop = () => {
                                     </span>
                                 )}
                             </div>
-                            <button
-                                onClick={() => addToCart(part)}
-                                disabled={part.quantity <= 0}
-                                className={`text-[10px] font-black px-3 py-2 rounded-lg uppercase tracking-widest transition-colors ${part.quantity > 0
-                                    ? 'bg-white text-black hover:bg-amber-500'
-                                    : 'bg-neutral-800 text-neutral-500 cursor-not-allowed border border-neutral-700'
-                                    }`}
-                            >
-                                {part.quantity > 0 ? 'Add' : 'N/A'}
-                            </button>
+                            <div className="flex items-center gap-1">
+                                <button
+                                    onClick={() => setInquiryConfig({ part, isOpen: true })}
+                                    className="bg-neutral-800 text-neutral-400 p-2 rounded-lg hover:bg-neutral-700 hover:text-white transition-colors"
+                                    title="Ask about this part"
+                                >
+                                    <MessageCircle size={14} />
+                                </button>
+                                <button
+                                    onClick={() => addToCart(part)}
+                                    disabled={part.quantity <= 0}
+                                    className={`text-[10px] font-black px-3 py-2 rounded-lg uppercase tracking-widest transition-colors ${part.quantity > 0
+                                        ? 'bg-white text-black hover:bg-amber-500'
+                                        : 'bg-neutral-800 text-neutral-500 cursor-not-allowed border border-neutral-700'
+                                        }`}
+                                >
+                                    {part.quantity > 0 ? 'Add' : 'N/A'}
+                                </button>
+                            </div>
                         </div>
                     </div>
                 ))}
@@ -310,9 +321,19 @@ const PartsShop = () => {
                     </div>
                 </div>
             )}
+
+            {inquiryConfig && (
+                <InquiryModal
+                    part={inquiryConfig.part}
+                    isOpen={!!inquiryConfig}
+                    onClose={() => setInquiryConfig(null)}
+                />
+            )}
         </div>
     );
 };
+
+
 
 export default PartsShop;
 

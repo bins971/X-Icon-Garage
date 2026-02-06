@@ -402,3 +402,43 @@ module.exports = {
     sendPaymentConfirmation,
     sendTrackingNotification
 };
+
+const sendInquiryNotification = async ({ customerName, email, phone, message, partName }) => {
+    try {
+        const apiInstance = new brevo.TransactionalEmailsApi();
+        apiInstance.setApiKey(brevo.TransactionalEmailsApiApiKeys.apiKey, process.env.BREVO_API_KEY);
+
+        const sendSmtpEmail = new brevo.SendSmtpEmail();
+        sendSmtpEmail.subject = `New Inquiry: ${partName ? partName : 'General Question'}`;
+        // Send to Admin email (configured as EMAIL_FROM for now, or could be a separate env var)
+        sendSmtpEmail.to = [{ email: process.env.EMAIL_FROM || 'carworkshopa@gmail.com', name: 'Admin' }];
+        sendSmtpEmail.sender = { name: 'X-ICON Website', email: process.env.EMAIL_FROM || 'carworkshopa@gmail.com' };
+        sendSmtpEmail.replyTo = { email: email, name: customerName };
+
+        sendSmtpEmail.htmlContent = `
+            <div style="font-family: Arial, sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 8px;">
+                <h2 style="color: #667eea;">New Customer Inquiry</h2>
+                <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                    <p><strong>Name:</strong> ${customerName}</p>
+                    <p><strong>Email:</strong> ${email}</p>
+                    <p><strong>Phone:</strong> ${phone || 'N/A'}</p>
+                    ${partName ? `<p><strong>Part:</strong> ${partName}</p>` : ''}
+                </div>
+                <h3 style="color: #333;">Message:</h3>
+                <p style="white-space: pre-wrap; background: #fff; padding: 15px; border: 1px solid #ddd; border-radius: 4px;">${message}</p>
+            </div>
+        `;
+
+        await apiInstance.sendTransacEmail(sendSmtpEmail);
+        console.log('[EMAIL] Inquiry notification sent to Admin');
+    } catch (error) {
+        console.error('[EMAIL] Failed to send inquiry notification:', error.message);
+    }
+};
+
+module.exports = {
+    sendPaymentInstructions,
+    sendPaymentConfirmation,
+    sendTrackingNotification,
+    sendInquiryNotification
+};

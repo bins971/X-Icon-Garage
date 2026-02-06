@@ -403,6 +403,20 @@ async function initializeDb() {
             }
 
             await client.query(`
+                CREATE TABLE IF NOT EXISTS inquiries (
+                    id UUID PRIMARY KEY,
+                    customerName TEXT NOT NULL,
+                    email TEXT NOT NULL,
+                    phone TEXT,
+                    message TEXT NOT NULL,
+                    partId UUID,
+                    partName TEXT,
+                    status TEXT DEFAULT 'NEW',
+                    createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            `);
+
+            await client.query(`
                 CREATE TABLE IF NOT EXISTS store_payouts (
                     id UUID PRIMARY KEY,
                     amount DECIMAL NOT NULL,

@@ -13,7 +13,8 @@ import {
     ShoppingCart,
     ChevronLeft,
     ChevronRight,
-    ShieldAlert
+    ShieldAlert,
+    MessageCircle
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import logo from '../assets/logo_clean.png';
@@ -33,6 +34,7 @@ const Sidebar = ({ isOpen, onClose }) => {
         { name: 'JOB ORDERS', icon: <Wrench size={18} />, path: '/dashboard/job-orders', roles: ['ADMIN', 'ADVISOR', 'MECHANIC'] },
         { name: 'APPOINTMENTS', icon: <CalendarCheck size={18} />, path: '/dashboard/appointments', roles: ['ADMIN', 'ADVISOR'] },
         { name: 'ONLINE ORDERS', icon: <ShoppingCart size={18} />, path: '/dashboard/pending-payments', roles: ['ADMIN', 'ADVISOR', 'ACCOUNTANT'] },
+        { name: 'INQUIRIES', icon: <MessageCircle size={18} />, path: '/dashboard/inquiries', roles: ['ADMIN', 'ADVISOR'] },
         { name: 'INVENTORY', icon: <Package size={18} />, path: '/dashboard/inventory', roles: ['ADMIN', 'ADVISOR', 'ACCOUNTANT'] },
         { name: 'INVOICES', icon: <FileText size={18} />, path: '/dashboard/invoices', roles: ['ADMIN', 'ADVISOR', 'ACCOUNTANT'] },
         { name: 'SECURITY', icon: <ShieldAlert size={18} />, path: '/dashboard/security', roles: ['ADMIN'] },

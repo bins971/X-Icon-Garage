@@ -22,6 +22,7 @@ import AppointmentManager from './pages/AppointmentManager';
 
 
 import InventoryList from './pages/InventoryList';
+import InquiryList from './pages/InquiryList';
 import InvoiceList from './pages/InvoiceList';
 import ReceiptView from './pages/ReceiptView';
 import CustomerHistory from './pages/CustomerHistory';
@@ -93,6 +94,7 @@ const App = () => {
               <Route path="appointments" element={<AppointmentManager />} />
               <Route path="inventory" element={<InventoryList />} />
               <Route path="invoices" element={<InvoiceList />} />
+              <Route path="inquiries" element={<InquiryList />} />
               <Route path="pending-payments" element={<PendingPayments />} />
               <Route path="security" element={<SecuritySettings />} />
               <Route path="reports" element={<div className="p-8"><h1 className="text-2xl font-bold">Business Reports</h1><p className="mt-4 text-slate-400 border-l-4 border-blue-500 pl-4">Advanced analytics are available on the main Dashboard.</p></div>} />

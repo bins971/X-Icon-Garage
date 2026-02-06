@@ -96,6 +96,7 @@ getDb().then(() => {
 app.use('/api/public', require('./routes/public'));
 app.use('/api/bookings', require('./routes/booking'));
 app.use('/api/shop', require('./routes/shop'));
+app.use('/api/inquiries', require('./routes/inquiries'));
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/customers', require('./routes/customers'));
 app.use('/api/vehicles', require('./routes/vehicles'));

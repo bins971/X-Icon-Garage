@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { Wrench, Settings, Clock, ShieldCheck, ArrowRight, Star, PenTool, CheckCircle2, Truck, ChevronDown, ChevronUp, MapPin, Zap, Shield, HelpCircle, X, Instagram, Facebook, Twitter } from 'lucide-react';
 import PublicNavbar from '../components/PublicNavbar';
 import ChatAssistant from '../components/ChatAssistant';
+import InquiryModal from '../components/InquiryModal';
 import logo from '../assets/logo_clean.png';
 
 const Home = () => {
@@ -11,6 +12,7 @@ const Home = () => {
 
     const [openFaq, setOpenFaq] = React.useState(null);
     const [showLegal, setShowLegal] = React.useState(null);
+    const [openInquiry, setOpenInquiry] = React.useState(false);
 
     useEffect(() => {
         // Scroll handling
@@ -319,6 +321,7 @@ const Home = () => {
                                 <h5 className="text-white font-black text-xs uppercase tracking-[0.3em] opacity-40">COMPANY</h5>
                                 <ul className="space-y-4">
                                     <li><Link to="/login" className="text-neutral-400 hover:text-amber-500 transition-colors text-sm font-bold uppercase tracking-widest block">Admin Portal</Link></li>
+                                    <li><button onClick={() => setOpenInquiry(true)} className="text-neutral-400 hover:text-amber-500 transition-colors text-sm font-bold uppercase tracking-widest block text-left">Contact Us</button></li>
                                     <li><button onClick={() => setShowLegal('TERMS')} className="text-neutral-400 hover:text-amber-500 transition-colors text-sm font-bold uppercase tracking-widest block text-left">Terms of Service</button></li>
                                     <li><button onClick={() => setShowLegal('PRIVACY')} className="text-neutral-400 hover:text-amber-500 transition-colors text-sm font-bold uppercase tracking-widest block text-left">Privacy Policy</button></li>
                                 </ul>
@@ -383,6 +386,11 @@ const Home = () => {
                 )}
             </footer>
             <ChatAssistant />
+
+            <InquiryModal
+                isOpen={openInquiry}
+                onClose={() => setOpenInquiry(false)}
+            />
         </div>
     );
 };
