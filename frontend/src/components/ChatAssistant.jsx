@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { MessageCircle, X, Send, Bot, User, Loader2, Sparkles, Calendar, ArrowRight, ShoppingCart, Clock, MapPin, Mail } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { ASSISTANT_KNOWLEDGE, FALLBACK_RESPONSE } from '../data/assistantKnowledge';
+import { ASSISTANT_KNOWLEDGE, FALLBACK_RESPONSE } from '../data/assistantKnowledge.jsx';
 
 const ChatAssistant = () => {
     const [isOpen, setIsOpen] = useState(false);

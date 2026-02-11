@@ -38,12 +38,6 @@ router.post('/', async (req, res) => {
 // @desc    Get all inquiries (Admin)
 // @route   GET /api/inquiries
 router.get('/', protect, authorize('ADMIN', 'ADVISOR'), async (req, res) => {
-    // Auth middleware usually here, assuming public for now or add protect/authorize if available
-    // For now, let's fetch all. In a real app, add `protect, authorize('ADMIN')`
-
-    // Note: If you have auth middleware import it.
-    // const { protect, authorize } = require('../middleware/auth');
-    // router.get('/', protect, authorize('ADMIN', 'ADVISOR'), ...
 
     const db = await getDb();
     try {

@@ -51,7 +51,7 @@ const Home = () => {
 
                         <div className="flex items-center gap-2 text-amber-500 font-black uppercase tracking-widest text-xs md:text-sm mb-12 animate-in fade-in slide-in-from-left-8 duration-700 delay-300">
                             <Clock size={16} />
-                            <span>Open Monday - Friday • 7:00 AM - 7:00 PM</span>
+                            <span>Open Monday - Friday • 8:00 AM - 6:00 PM</span>
                         </div>
 
                         <div className="flex flex-col sm:flex-row gap-5 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-300">
@@ -282,7 +282,7 @@ const Home = () => {
                     <div className="grid grid-cols-1 lg:grid-cols-4 gap-16 items-start">
                         <div className="lg:col-span-2 space-y-8">
                             <div className="flex items-center gap-3">
-                                <img src={logo} alt="X-Icon Garage" className="h-12 w-auto object-contain" />
+                                <img src={logo} alt="X-ICON GARAGE Logo - Premium Car Workshop in Las Piñas City" className="h-12 w-auto object-contain" />
                                 <span className="text-3xl font-black text-white tracking-tighter uppercase italic">X-ICON <span className="text-amber-500">GARAGE</span></span>
                             </div>
                             <p className="text-neutral-500 text-sm leading-relaxed max-w-sm font-bold uppercase tracking-widest">
