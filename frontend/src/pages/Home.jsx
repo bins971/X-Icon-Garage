@@ -89,7 +89,7 @@ const Home = () => {
                                 icon: <Truck size={32} />,
                                 color: 'text-orange-400',
                                 glow: 'group-hover:shadow-orange-500/20',
-                                title: 'PREMIUM HOME SERVICE',
+                                title: 'HOME SERVICE',
                                 desc: 'We bring the garage to you. Professional maintenance and repairs at the comfort of your home.'
                             },
                             {
@@ -191,7 +191,7 @@ const Home = () => {
                                 YOUR RIDE?
                             </h2>
                             <p className="text-xl text-neutral-400 mb-12 font-medium">
-                                Join thousands of satisfied drivers who trust <span className="text-white">X-ICON GARAGE</span> for their premium auto needs.
+                                Join thousands of satisfied drivers who trust <span className="text-white">X-ICON GARAGE</span> for their auto needs.
                             </p>
                             <div className="flex flex-col sm:flex-row justify-center gap-5">
                                 <Link to="/shop" className="bg-white text-black px-12 py-5 rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-neutral-200 transition-all active:scale-95 shadow-2xl">
@@ -213,14 +213,14 @@ const Home = () => {
                         <div className="text-center mb-20">
                             <HelpCircle size={48} className="text-amber-500 mx-auto mb-6" />
                             <h3 className="text-4xl md:text-5xl font-black text-white tracking-tighter italic uppercase">FREQUENTLY ASKED QUESTIONS</h3>
-                            <p className="text-neutral-500 font-bold uppercase tracking-widest mt-4">Everything you need to know about our elite service</p>
+                            <p className="text-neutral-500 font-bold uppercase tracking-widest mt-4">Everything you need to know about our service</p>
                         </div>
 
                         <div className="space-y-4">
                             {[
-                                { q: 'What kind of cars do you specialize in?', a: 'We specialize in performance European and Japanese machines, but our workshop is equipped to handle elite care for all supreme machines regardless of their origin.' },
+                                { q: 'What kind of cars do you specialize in?', a: 'We specialize in performance European and Japanese machines, but our workshop is equipped to handle for all supreme machines regardless of their origin.' },
                                 { q: 'How long does a Stage 1 tune take?', a: 'A standard Stage 1 package typically takes 4-6 hours, including pre-installation diagnostics, installation, and rigorous dyno testing to ensure optimal reliability.' },
-                                { q: 'Do you offer home pick-up and delivery?', a: 'Yes! Our Premium Home Service allows for on-site maintenance, and we also offer secure pick-up and delivery for major workshop repairs within the city.' },
+                                { q: 'Do you offer home pick-up and delivery?', a: 'Yes! Our Home Service allows for on-site maintenance, and we also offer secure pick-up and delivery for major workshop repairs within the city.' },
                                 { q: 'Are your parts factory certified?', a: 'We use 100% genuine and factory-grade parts. All parts from our X-ICON Shop come with a guaranteed longevity warranty for your peace of mind.' }
                             ].map((faq, i) => (
                                 <div key={i} className="border border-neutral-900 bg-neutral-900/40 rounded-3xl overflow-hidden transition-all duration-300">
@@ -264,7 +264,7 @@ const Home = () => {
                                 </div>
                                 <div>
                                     <h4 className="text-white font-black text-xs uppercase tracking-widest">VISIT US</h4>
-                                    <p className="text-amber-500 text-[10px] font-black uppercase tracking-widest">Open 24/7</p>
+                                    <p className="text-amber-500 text-[10px] font-black uppercase tracking-widest">Open 8AM - 6PM</p>
                                 </div>
                             </div>
                             <p className="text-neutral-400 text-xs font-bold uppercase tracking-wider leading-relaxed">
@@ -360,14 +360,14 @@ const Home = () => {
                                             <h3 className="text-white font-bold uppercase tracking-widest text-sm">1. Service Protocols</h3>
                                             <p>All job orders are subject to technical appraisal. We reserve the right to prioritize performance builds for Supreme Tier members.</p>
                                             <h3 className="text-white font-bold uppercase tracking-widest text-sm">2. Safety Compliance</h3>
-                                            <p>Customers must strictly follow workshop safety zones when present on-site. Unauthorized access to precision tools is strictly prohibited.</p>
+                                            <p>Customers must strictly follow workshop safety zones when present on-site. Unauthorized access to tools is strictly prohibited.</p>
                                             <h3 className="text-white font-bold uppercase tracking-widest text-sm">3. Maintenance Execution</h3>
                                             <p>We provide a 30-day performance guarantee on all labor. Parts are subject to manufacturer warranty terms.</p>
                                         </div>
                                     ) : (
                                         <div className="space-y-6">
                                             <p className="text-amber-500 font-black uppercase tracking-widest text-xs">Data Security Protocol - X-ICON SECURE</p>
-                                            <p>Your machine's data is your property. We protect your logs with enterprise-grade encryption.</p>
+                                            <p>Your machine's data is your property. We protect your logs with enterprise grade encryption.</p>
                                             <h3 className="text-white font-bold uppercase tracking-widest text-sm">1. Information Collection</h3>
                                             <p>We collect VIN, plate numbers, and mechanical logs purely for service tracking and performance optimization.</p>
                                             <h3 className="text-white font-bold uppercase tracking-widest text-sm">2. Data Usage</h3>
