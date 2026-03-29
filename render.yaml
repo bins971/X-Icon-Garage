@@ -1,10 +1,9 @@
 services:
   - type: web
     name: x-icon-garage
-    env: node
+    env: docker # Use the Dockerfile for building and running
     plan: free # Can be upgraded to 'starter' in Render Dashboard
-    buildCommand: npm run build
-    startCommand: npm start
+    dockerfilePath: ./Dockerfile
     envVars:
       - key: NODE_ENV
         value: production

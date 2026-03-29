@@ -21,9 +21,8 @@ COPY backend ./backend
 
 # Build frontend
 RUN npm run build --prefix frontend
-
-# Generate Prisma client
 WORKDIR /app/backend
+ENV DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy"
 RUN npx prisma generate --schema=prisma/schema.prisma
 
 # Final Stage (Production)
