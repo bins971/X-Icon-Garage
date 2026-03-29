@@ -1,0 +1,49 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --primary: #3b82f6;
+  --secondary: #1e293b;
+  --accent: #10b981;
+  --danger: #ef4444;
+  --warning: #f59e0b;
+  --info: #3b82f6;
+  --bg: #000000;
+  --card: #0a0a0a;
+  --text: #e5e5e5;
+}
+
+.dark {
+  --bg: #0f172a;
+  --card: #1e293b;
+  --text: #f8fafc;
+}
+
+body {
+  background-color: #000000;
+  color: #a3a3a3;
+  font-family: 'Inter', sans-serif;
+}
+
+.glass {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+@layer utilities {
+  @keyframes toast-progress {
+    from {
+      transform: scaleX(1);
+    }
+
+    to {
+      transform: scaleX(0);
+    }
+  }
+
+  .animate-toast-progress {
+    animation: toast-progress 5s linear forwards;
+  }
+}

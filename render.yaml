@@ -1,0 +1,28 @@
+services:
+  - type: web
+    name: x-icon-garage
+    env: node
+    plan: free # Can be upgraded to 'starter' in Render Dashboard
+    buildCommand: npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false # You will paste your Neon URL in the Render Dashboard
+      - key: JWT_SECRET
+        generateValue: true # Render will securely generate this automatically
+      - key: SMTP_HOST
+        value: smtp-relay.brevo.com
+      - key: SMTP_PORT
+        value: 587
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
